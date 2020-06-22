@@ -1,5 +1,7 @@
 package org.schabi.newpipe.extractor.services.youtube.extractors;
 
+import android.util.LruCache;
+
 import com.grack.nanojson.JsonArray;
 import com.grack.nanojson.JsonObject;
 import com.grack.nanojson.JsonParser;
@@ -630,7 +632,15 @@ public class YoutubeStreamExtractor extends StreamExtractor {
         }
 
         if (decryptionCode.isEmpty()) {
-            decryptionCode = loadDecryptionCode(playerUrl);
+            StreamingService streamingService = getService();
+            LruCache<String, String> lruCache = streamingService.getLruCache();
+            String decryption = lruCache.get(playerUrl);
+            if (decryption == null) {
+                decryptionCode = loadDecryptionCode(playerUrl);
+                lruCache.put(playerUrl, decryptionCode);
+            } else {
+                decryptionCode = decryption;
+            }
         }
 
         if (subtitlesInfos.isEmpty()) {
