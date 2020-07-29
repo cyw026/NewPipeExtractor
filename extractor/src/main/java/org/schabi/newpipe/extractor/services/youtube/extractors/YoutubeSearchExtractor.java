@@ -155,7 +155,7 @@ public class YoutubeSearchExtractor extends SearchExtractor {
                 .object()
                     .object("context")
                         .object("client")
-                            .value("hl", "en")
+                            .value("hl", getExtractorLocalization().getLocalizationCode())
                             .value("gl", getExtractorContentCountry().getCountryCode())
                             .value("clientName", "WEB")
                             .value("clientVersion", getClientVersion())
