@@ -193,7 +193,7 @@ public class YoutubeSearchExtractor extends SearchExtractor {
     }
 
     private void collectStreamsFrom(final InfoItemsSearchCollector collector, final JsonArray videos) throws NothingFoundException, ParsingException {
-        final TimeAgoParser timeAgoParser = getTimeAgoParser();
+        final TimeAgoParser timeAgoParser = null;
 
         for (Object item : videos) {
             if (((JsonObject) item).has("backgroundPromoRenderer")) {
