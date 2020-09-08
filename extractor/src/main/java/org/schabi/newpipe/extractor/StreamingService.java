@@ -393,8 +393,8 @@ public abstract class StreamingService {
                 return lessSpecificParser;
             }
         }
-
-        throw new IllegalArgumentException("Localization is not supported (\"" + localization.toString() + "\")");
+        return null;
+//        throw new IllegalArgumentException("Localization is not supported (\"" + localization.toString() + "\")");
     }
 
 }
