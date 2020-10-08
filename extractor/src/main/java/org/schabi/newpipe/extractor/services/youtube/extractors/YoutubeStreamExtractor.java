@@ -627,7 +627,6 @@ public class YoutubeStreamExtractor extends StreamExtractor {
             "yt\\.akamaized\\.net/\\)\\s*\\|\\|\\s*.*?\\s*c\\s*&&\\s*d\\.set\\([^,]+\\s*,\\s*(:encodeURIComponent\\s*\\()([a-zA-Z0-9$]+)\\(",
             "\\bc\\s*&&\\s*d\\.set\\([^,]+\\s*,\\s*(:encodeURIComponent\\s*\\()([a-zA-Z0-9$]+)\\("
     };
-            ;
 
     private volatile String decryptionCode = "";
 
@@ -788,16 +787,16 @@ public class YoutubeStreamExtractor extends StreamExtractor {
     }
 
     private String decryptSignature(String encryptedSig, String decryptionCode) throws DecryptException {
-        Context context = Context.enter();
+        final Context context = Context.enter();
         context.setOptimizationLevel(-1);
-        Object result;
+        final Object result;
         try {
-            ScriptableObject scope = context.initStandardObjects();
+            final ScriptableObject scope = context.initSafeStandardObjects();
             context.evaluateString(scope, decryptionCode, "decryptionCode", 1, null);
-            Function decryptionFunc = (Function) scope.get("decrypt", scope);
+            final Function decryptionFunc = (Function) scope.get("decrypt", scope);
             result = decryptionFunc.call(context, scope, scope, new Object[]{encryptedSig});
         } catch (Exception e) {
-            throw new DecryptException("could not get decrypt signature", e);
+            throw new DecryptException("Could not get decrypt signature", e);
         } finally {
             Context.exit();
         }
@@ -958,6 +957,13 @@ public class YoutubeStreamExtractor extends StreamExtractor {
                 try {
                     ItagItem itagItem = ItagItem.getItag(itag);
                     if (itagItem.itagType == itagTypeWanted) {
+                        // Ignore streams that are delivered using YouTube's OTF format,
+                        // as those only work with DASH and not with progressive HTTP.
+                        if (formatData.getString("type", EMPTY_STRING)
+                                .equalsIgnoreCase("FORMAT_STREAM_TYPE_OTF")) {
+                            continue;
+                        }
+
                         String streamUrl;
                         if (formatData.has("url")) {
                             streamUrl = formatData.getString("url");
