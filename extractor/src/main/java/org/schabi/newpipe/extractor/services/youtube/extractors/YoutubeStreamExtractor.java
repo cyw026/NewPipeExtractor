@@ -22,16 +22,7 @@ import org.schabi.newpipe.extractor.localization.TimeAgoPatternsManager;
 import org.schabi.newpipe.extractor.services.youtube.ItagItem;
 import org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper;
 import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeChannelLinkHandlerFactory;
-import org.schabi.newpipe.extractor.stream.AudioStream;
-import org.schabi.newpipe.extractor.stream.Description;
-import org.schabi.newpipe.extractor.stream.Frameset;
-import org.schabi.newpipe.extractor.stream.Stream;
-import org.schabi.newpipe.extractor.stream.StreamExtractor;
-import org.schabi.newpipe.extractor.stream.StreamInfoItemExtractor;
-import org.schabi.newpipe.extractor.stream.StreamInfoItemsCollector;
-import org.schabi.newpipe.extractor.stream.StreamType;
-import org.schabi.newpipe.extractor.stream.SubtitlesStream;
-import org.schabi.newpipe.extractor.stream.VideoStream;
+import org.schabi.newpipe.extractor.stream.*;
 import org.schabi.newpipe.extractor.utils.Parser;
 import org.schabi.newpipe.extractor.utils.Utils;
 
@@ -100,6 +91,8 @@ public class YoutubeStreamExtractor extends StreamExtractor {
     private JsonObject videoPrimaryInfoRenderer;
     private JsonObject videoSecondaryInfoRenderer;
     private int ageLimit;
+
+    private boolean newJsonScheme;
 
     @Nonnull
     private List<SubtitlesInfo> subtitlesInfos = new ArrayList<>();
@@ -405,19 +398,19 @@ public class YoutubeStreamExtractor extends StreamExtractor {
 
     @Nonnull
     @Override
-    public String getSubChannelUrl() throws ParsingException {
+    public String getSubChannelUrl() {
         return "";
     }
 
     @Nonnull
     @Override
-    public String getSubChannelName() throws ParsingException {
+    public String getSubChannelName() {
         return "";
     }
 
     @Nonnull
     @Override
-    public String getSubChannelAvatarUrl() throws ParsingException {
+    public String getSubChannelAvatarUrl() {
         return "";
     }
 
@@ -666,25 +659,22 @@ public class YoutubeStreamExtractor extends StreamExtractor {
             JsonObject playerConfig;
 
             // sometimes at random YouTube does not provide the player config,
-            // so just retry the same request three times
-            int attempts = 2;
-            while (true) {
-                playerConfig = initialAjaxJson.getObject(2).getObject("player", null);
-                if (playerConfig != null) {
-                    break;
-                }
+            playerConfig = initialAjaxJson.getObject(2).getObject("player", null);
+            if (playerConfig == null) {
+                newJsonScheme = true;
 
-                if (attempts <= 0) {
-                    throw new ParsingException(
-                            "YouTube did not provide player config even after three attempts");
-                }
-                initialAjaxJson = getJsonResponse(url, getExtractorLocalization());
-                --attempts;
+                initialData = initialAjaxJson.getObject(3).getObject("response");
+                final EmbeddedInfo info = getEmbeddedInfo();
+                final String videoInfoUrl = getVideoInfoUrl(getId(), info.sts);
+                final String infoPageResponse = downloader.get(videoInfoUrl, getExtractorLocalization()).responseBody();
+                videoInfoPage.putAll(Parser.compatParseMap(infoPageResponse));
+                playerUrl = info.url;
+            } else {
+                initialData = initialAjaxJson.getObject(3).getObject("response");
+
+                playerArgs = getPlayerArgs(playerConfig);
+                playerUrl = getPlayerUrl(playerConfig);
             }
-            initialData = initialAjaxJson.getObject(3).getObject("response");
-
-            playerArgs = getPlayerArgs(playerConfig);
-            playerUrl = getPlayerUrl(playerConfig);
         }
 
         playerResponse = getPlayerResponse();
@@ -732,6 +722,10 @@ public class YoutubeStreamExtractor extends StreamExtractor {
     private JsonObject getPlayerResponse() throws ParsingException {
         try {
             String playerResponseStr;
+            if (newJsonScheme) {
+                return initialAjaxJson.getObject(2).getObject("playerResponse");
+            }
+
             if (playerArgs != null) {
                 playerResponseStr = playerArgs.getString("player_response");
             } else {
