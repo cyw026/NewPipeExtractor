@@ -16,7 +16,6 @@ import java.util.List;
 
 import javax.annotation.Nullable;
 
-import static org.junit.Assert.fail;
 import static org.schabi.newpipe.extractor.ServiceList.YouTube;
 
 /*

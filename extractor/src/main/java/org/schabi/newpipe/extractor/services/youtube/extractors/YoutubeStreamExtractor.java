@@ -3,6 +3,10 @@ package org.schabi.newpipe.extractor.services.youtube.extractors;
 import com.grack.nanojson.JsonArray;
 import com.grack.nanojson.JsonObject;
 import com.grack.nanojson.JsonParser;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.ScriptableObject;
@@ -22,7 +26,16 @@ import org.schabi.newpipe.extractor.localization.TimeAgoPatternsManager;
 import org.schabi.newpipe.extractor.services.youtube.ItagItem;
 import org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper;
 import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeChannelLinkHandlerFactory;
-import org.schabi.newpipe.extractor.stream.*;
+import org.schabi.newpipe.extractor.stream.AudioStream;
+import org.schabi.newpipe.extractor.stream.Description;
+import org.schabi.newpipe.extractor.stream.Frameset;
+import org.schabi.newpipe.extractor.stream.Stream;
+import org.schabi.newpipe.extractor.stream.StreamExtractor;
+import org.schabi.newpipe.extractor.stream.StreamInfoItemExtractor;
+import org.schabi.newpipe.extractor.stream.StreamInfoItemsCollector;
+import org.schabi.newpipe.extractor.stream.StreamType;
+import org.schabi.newpipe.extractor.stream.SubtitlesStream;
+import org.schabi.newpipe.extractor.stream.VideoStream;
 import org.schabi.newpipe.extractor.utils.Parser;
 import org.schabi.newpipe.extractor.utils.Utils;
 
@@ -746,10 +759,29 @@ public class YoutubeStreamExtractor extends StreamExtractor {
 
             // Get player url
             final String assetsPattern = "\"assets\":.+?\"js\":\\s*(\"[^\"]+\")";
-            String playerUrl = Parser.matchGroup1(assetsPattern, embedPageContent)
-                    .replace("\\", "").replace("\"", "");
+            String playerUrl = null;
+            try {
+                playerUrl = Parser.matchGroup1(assetsPattern, embedPageContent)
+                        .replace("\\", "").replace("\"", "");
+            } catch (Parser.RegexException ex) {
+                // playerUrl is still available in the file, just somewhere else
+                final Document doc = Jsoup.parse(embedPageContent);
+                final Elements elems = doc.select("script").attr("name", "player_ias/base");
+                for (Element elem : elems) {
+                    if (elem.attr("src").contains("base.js")) {
+                        playerUrl = elem.attr("src");
+                    }
+                }
+
+                if (playerUrl == null) {
+                    throw new ParsingException("Could not get playerUrl");
+                }
+            }
+
             if (playerUrl.startsWith("//")) {
                 playerUrl = HTTPS + playerUrl;
+            } else if (playerUrl.startsWith("/")) {
+                playerUrl = HTTPS + "//youtube.com" + playerUrl;
             }
 
             try {
