@@ -5,6 +5,10 @@ import android.util.LruCache;
 import com.grack.nanojson.JsonArray;
 import com.grack.nanojson.JsonObject;
 import com.grack.nanojson.JsonParser;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.ScriptableObject;
@@ -102,6 +106,8 @@ public class YoutubeStreamExtractor extends StreamExtractor {
     private JsonObject videoPrimaryInfoRenderer;
     private JsonObject videoSecondaryInfoRenderer;
     private int ageLimit;
+
+    private boolean newJsonScheme;
 
     @Nonnull
     private List<SubtitlesInfo> subtitlesInfos = new ArrayList<>();
@@ -407,19 +413,19 @@ public class YoutubeStreamExtractor extends StreamExtractor {
 
     @Nonnull
     @Override
-    public String getSubChannelUrl() throws ParsingException {
+    public String getSubChannelUrl() {
         return "";
     }
 
     @Nonnull
     @Override
-    public String getSubChannelName() throws ParsingException {
+    public String getSubChannelName() {
         return "";
     }
 
     @Nonnull
     @Override
-    public String getSubChannelAvatarUrl() throws ParsingException {
+    public String getSubChannelAvatarUrl() {
         return "";
     }
 
@@ -668,25 +674,22 @@ public class YoutubeStreamExtractor extends StreamExtractor {
             JsonObject playerConfig;
 
             // sometimes at random YouTube does not provide the player config,
-            // so just retry the same request three times
-            int attempts = 2;
-            while (true) {
-                playerConfig = initialAjaxJson.getObject(2).getObject("player", null);
-                if (playerConfig != null) {
-                    break;
-                }
+            playerConfig = initialAjaxJson.getObject(2).getObject("player", null);
+            if (playerConfig == null) {
+                newJsonScheme = true;
 
-                if (attempts <= 0) {
-                    throw new ParsingException(
-                            "YouTube did not provide player config even after three attempts");
-                }
-                initialAjaxJson = getJsonResponse(url, getExtractorLocalization());
-                --attempts;
+                initialData = initialAjaxJson.getObject(3).getObject("response");
+                final EmbeddedInfo info = getEmbeddedInfo();
+                final String videoInfoUrl = getVideoInfoUrl(getId(), info.sts);
+                final String infoPageResponse = downloader.get(videoInfoUrl, getExtractorLocalization()).responseBody();
+                videoInfoPage.putAll(Parser.compatParseMap(infoPageResponse));
+                playerUrl = info.url;
+            } else {
+                initialData = initialAjaxJson.getObject(3).getObject("response");
+
+                playerArgs = getPlayerArgs(playerConfig);
+                playerUrl = getPlayerUrl(playerConfig);
             }
-            initialData = initialAjaxJson.getObject(3).getObject("response");
-
-            playerArgs = getPlayerArgs(playerConfig);
-            playerUrl = getPlayerUrl(playerConfig);
         }
 
         playerResponse = getPlayerResponse();
@@ -742,6 +745,10 @@ public class YoutubeStreamExtractor extends StreamExtractor {
     private JsonObject getPlayerResponse() throws ParsingException {
         try {
             String playerResponseStr;
+            if (newJsonScheme) {
+                return initialAjaxJson.getObject(2).getObject("playerResponse");
+            }
+
             if (playerArgs != null) {
                 playerResponseStr = playerArgs.getString("player_response");
             } else {
@@ -762,10 +769,29 @@ public class YoutubeStreamExtractor extends StreamExtractor {
 
             // Get player url
             final String assetsPattern = "\"assets\":.+?\"js\":\\s*(\"[^\"]+\")";
-            String playerUrl = Parser.matchGroup1(assetsPattern, embedPageContent)
-                    .replace("\\", "").replace("\"", "");
+            String playerUrl = null;
+            try {
+                playerUrl = Parser.matchGroup1(assetsPattern, embedPageContent)
+                        .replace("\\", "").replace("\"", "");
+            } catch (Parser.RegexException ex) {
+                // playerUrl is still available in the file, just somewhere else
+                final Document doc = Jsoup.parse(embedPageContent);
+                final Elements elems = doc.select("script").attr("name", "player_ias/base");
+                for (Element elem : elems) {
+                    if (elem.attr("src").contains("base.js")) {
+                        playerUrl = elem.attr("src");
+                    }
+                }
+
+                if (playerUrl == null) {
+                    throw new ParsingException("Could not get playerUrl");
+                }
+            }
+
             if (playerUrl.startsWith("//")) {
                 playerUrl = HTTPS + playerUrl;
+            } else if (playerUrl.startsWith("/")) {
+                playerUrl = HTTPS + "//youtube.com" + playerUrl;
             }
 
             try {
