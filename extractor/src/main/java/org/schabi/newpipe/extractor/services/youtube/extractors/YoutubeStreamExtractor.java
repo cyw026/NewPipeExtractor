@@ -5,7 +5,6 @@ import android.util.LruCache;
 import com.grack.nanojson.JsonArray;
 import com.grack.nanojson.JsonObject;
 import com.grack.nanojson.JsonParser;
-
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.ScriptableObject;
@@ -38,6 +37,8 @@ import org.schabi.newpipe.extractor.stream.VideoStream;
 import org.schabi.newpipe.extractor.utils.Parser;
 import org.schabi.newpipe.extractor.utils.Utils;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.text.SimpleDateFormat;
@@ -50,9 +51,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.fixThumbnailUrl;
 import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.getJsonResponse;
@@ -86,8 +84,8 @@ public class YoutubeStreamExtractor extends StreamExtractor {
     // Exceptions
     //////////////////////////////////////////////////////////////////////////*/
 
-    public class DecryptException extends ParsingException {
-        DecryptException(String message, Throwable cause) {
+    public class DeobfuscateException extends ParsingException {
+        DeobfuscateException(String message, Throwable cause) {
             super(message, cause);
         }
     }
@@ -158,12 +156,14 @@ public class YoutubeStreamExtractor extends StreamExtractor {
                 TimeAgoParser timeAgoParser = TimeAgoPatternsManager.getTimeAgoParserFor(Localization.fromLocalizationCode("en"));
                 Calendar parsedTime = timeAgoParser.parse(time).date();
                 return new SimpleDateFormat("yyyy-MM-dd").format(parsedTime.getTime());
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
 
             try { // Premiered Feb 21, 2020
                 Date d = new SimpleDateFormat("MMM dd, YYYY", Locale.ENGLISH).parse(time);
                 return new SimpleDateFormat("yyyy-MM-dd").format(d.getTime());
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }
 
         try {
@@ -171,7 +171,8 @@ public class YoutubeStreamExtractor extends StreamExtractor {
             Date d = new SimpleDateFormat("dd MMM yyyy", Locale.ENGLISH).parse(
                     getTextFromObject(getVideoPrimaryInfoRenderer().getObject("dateText")));
             return new SimpleDateFormat("yyyy-MM-dd").format(d);
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
         throw new ParsingException("Could not get upload date");
     }
 
@@ -255,7 +256,15 @@ public class YoutubeStreamExtractor extends StreamExtractor {
      */
     @Override
     public long getTimeStamp() throws ParsingException {
-        return getTimestampSeconds("((#|&|\\?)(t|start)=\\d{0,3}h?\\d{0,3}m?\\d{1,3}s?)");
+        final long timestamp =
+                getTimestampSeconds("((#|&|\\?)t=\\d{0,3}h?\\d{0,3}m?\\d{1,3}s?)");
+
+        if (timestamp == -2) {
+            // regex for timestamp was not found
+            return 0;
+        } else {
+            return timestamp;
+        }
     }
 
     @Override
@@ -362,7 +371,8 @@ public class YoutubeStreamExtractor extends StreamExtractor {
         try {
             uploaderName = getTextFromObject(getVideoSecondaryInfoRenderer().getObject("owner")
                     .getObject("videoOwnerRenderer").getObject("title"));
-        } catch (ParsingException ignored) { }
+        } catch (ParsingException ignored) {
+        }
 
         if (isNullOrEmpty(uploaderName)) {
             uploaderName = playerResponse.getObject("videoDetails").getString("author");
@@ -430,11 +440,11 @@ public class YoutubeStreamExtractor extends StreamExtractor {
             }
 
             if (!dashManifestUrl.contains("/signature/")) {
-                String encryptedSig = Parser.matchGroup1("/s/([a-fA-F0-9\\.]+)", dashManifestUrl);
-                String decryptedSig;
+                String obfuscatedSig = Parser.matchGroup1("/s/([a-fA-F0-9\\.]+)", dashManifestUrl);
+                String deobfuscatedSig;
 
-                decryptedSig = decryptSignature(encryptedSig, decryptionCode);
-                dashManifestUrl = dashManifestUrl.replace("/s/" + encryptedSig, "/signature/" + decryptedSig);
+                deobfuscatedSig = deobfuscateSignature(obfuscatedSig, deobfuscationCode);
+                dashManifestUrl = dashManifestUrl.replace("/s/" + obfuscatedSig, "/signature/" + deobfuscatedSig);
             }
 
             return dashManifestUrl;
@@ -570,11 +580,14 @@ public class YoutubeStreamExtractor extends StreamExtractor {
         }
     }
 
+    @Nullable
     @Override
     public StreamInfoItemsCollector getRelatedStreams() throws ExtractionException {
         assertPageFetched();
 
-        if (getAgeLimit() != NO_AGE_LIMIT) return null;
+        if (getAgeLimit() != NO_AGE_LIMIT) {
+            return null;
+        }
 
         try {
             final StreamInfoItemsCollector collector = new StreamInfoItemsCollector(getServiceId());
@@ -606,10 +619,11 @@ public class YoutubeStreamExtractor extends StreamExtractor {
     @Override
     public String getErrorMessage() {
         try {
-            return getTextFromObject(initialAjaxJson.getObject(2).getObject("playerResponse").getObject("playabilityStatus")
-                    .getObject("errorScreen").getObject("playerErrorMessageRenderer").getObject("reason"));
-        } catch (ParsingException e) {
-            return null;
+            return getTextFromObject(initialAjaxJson.getObject(2).getObject("playerResponse")
+                    .getObject("playabilityStatus").getObject("errorScreen")
+                    .getObject("playerErrorMessageRenderer").getObject("reason"));
+        } catch (ParsingException | NullPointerException e) {
+            return null; // no error message
         }
     }
 
@@ -620,7 +634,7 @@ public class YoutubeStreamExtractor extends StreamExtractor {
     private static final String FORMATS = "formats";
     private static final String ADAPTIVE_FORMATS = "adaptiveFormats";
     private static final String HTTPS = "https:";
-    private static final String DECRYPTION_FUNC_NAME = "decrypt";
+    private static final String DEOBFUSCATION_FUNC_NAME = "decrypt";
 
     private final static String[] REGEXES = {
             "(?:\\b|[^a-zA-Z0-9$])([a-zA-Z0-9$]{2})\\s*=\\s*function\\(\\s*a\\s*\\)\\s*\\{\\s*a\\s*=\\s*a\\.split\\(\\s*\"\"\\s*\\)",
@@ -630,7 +644,7 @@ public class YoutubeStreamExtractor extends StreamExtractor {
             "\\bc\\s*&&\\s*d\\.set\\([^,]+\\s*,\\s*(:encodeURIComponent\\s*\\()([a-zA-Z0-9$]+)\\("
     };
 
-    private volatile String decryptionCode = "";
+    private volatile String deobfuscationCode = "";
 
     @Override
     public void onFetchPage(@Nonnull Downloader downloader) throws IOException, ExtractionException {
@@ -685,15 +699,15 @@ public class YoutubeStreamExtractor extends StreamExtractor {
             throw new ContentNotAvailableException("Got error: \"" + reason + "\"");
         }
 
-        if (decryptionCode.isEmpty()) {
+        if (deobfuscationCode.isEmpty()) {
             StreamingService streamingService = getService();
             LruCache<String, String> lruCache = streamingService.getLruCache();
             String decryption = lruCache.get(playerUrl);
             if (decryption == null) {
-                decryptionCode = loadDecryptionCode(playerUrl);
-                lruCache.put(playerUrl, decryptionCode);
+                deobfuscationCode = loadDeobfuscationCode(playerUrl);
+                lruCache.put(playerUrl, deobfuscationCode);
             } else {
-                decryptionCode = decryption;
+                deobfuscationCode = decryption;
             }
         }
 
@@ -714,7 +728,7 @@ public class YoutubeStreamExtractor extends StreamExtractor {
     private String getPlayerUrl(final JsonObject playerConfig) throws ParsingException {
         // The Youtube service needs to be initialized by downloading the
         // js-Youtube-player. This is done in order to get the algorithm
-        // for decrypting cryptic signatures inside certain stream URLs.
+        // for deobfuscating cryptic signatures inside certain stream URLs.
         final String playerUrl = playerConfig.getObject("assets").getString("js");
 
         if (playerUrl == null) {
@@ -766,11 +780,11 @@ public class YoutubeStreamExtractor extends StreamExtractor {
 
         } catch (IOException e) {
             throw new ParsingException(
-                    "Could load decryption code form restricted video for the Youtube service.", e);
+                    "Could load deobfuscation code form restricted video for the Youtube service.", e);
         }
     }
 
-    private String loadDecryptionCode(String playerUrl) throws DecryptException {
+    private String loadDeobfuscationCode(String playerUrl) throws DeobfuscateException {
         try {
             Downloader downloader = NewPipe.getDownloader();
             if (!playerUrl.contains("https://youtube.com")) {
@@ -780,49 +794,49 @@ public class YoutubeStreamExtractor extends StreamExtractor {
             }
 
             final String playerCode = downloader.get(playerUrl, getExtractorLocalization()).responseBody();
-            final String decryptionFunctionName = getDecryptionFuncName(playerCode);
+            final String deobfuscationFunctionName = getDeobfuscationFuncName(playerCode);
 
             final String functionPattern = "("
-                    + decryptionFunctionName.replace("$", "\\$")
+                    + deobfuscationFunctionName.replace("$", "\\$")
                     + "=function\\([a-zA-Z0-9_]+\\)\\{.+?\\})";
-            final String decryptionFunction = "var " + Parser.matchGroup1(functionPattern, playerCode) + ";";
+            final String deobfuscateFunction = "var " + Parser.matchGroup1(functionPattern, playerCode) + ";";
 
             final String helperObjectName =
-                    Parser.matchGroup1(";([A-Za-z0-9_\\$]{2})\\...\\(", decryptionFunction);
+                    Parser.matchGroup1(";([A-Za-z0-9_\\$]{2})\\...\\(", deobfuscateFunction);
             final String helperPattern =
                     "(var " + helperObjectName.replace("$", "\\$") + "=\\{.+?\\}\\};)";
             final String helperObject =
                     Parser.matchGroup1(helperPattern, playerCode.replace("\n", ""));
 
             final String callerFunction =
-                    "function " + DECRYPTION_FUNC_NAME + "(a){return " + decryptionFunctionName + "(a);}";
+                    "function " + DEOBFUSCATION_FUNC_NAME + "(a){return " + deobfuscationFunctionName + "(a);}";
 
-            return helperObject + decryptionFunction + callerFunction;
+            return helperObject + deobfuscateFunction + callerFunction;
         } catch (IOException ioe) {
-            throw new DecryptException("Could not load decrypt function", ioe);
+            throw new DeobfuscateException("Could not load deobfuscate function", ioe);
         } catch (Exception e) {
-            throw new DecryptException("Could not parse decrypt function ", e);
+            throw new DeobfuscateException("Could not parse deobfuscate function ", e);
         }
     }
 
-    private String decryptSignature(String encryptedSig, String decryptionCode) throws DecryptException {
+    private String deobfuscateSignature(String obfuscatedSig, String deobfuscationCode) throws DeobfuscateException {
         final Context context = Context.enter();
         context.setOptimizationLevel(-1);
         final Object result;
         try {
             final ScriptableObject scope = context.initSafeStandardObjects();
-            context.evaluateString(scope, decryptionCode, "decryptionCode", 1, null);
-            final Function decryptionFunc = (Function) scope.get("decrypt", scope);
-            result = decryptionFunc.call(context, scope, scope, new Object[]{encryptedSig});
+            context.evaluateString(scope, deobfuscationCode, "decryptionCode", 1, null);
+            final Function deobfuscateFunc = (Function) scope.get("decrypt", scope);
+            result = deobfuscateFunc.call(context, scope, scope, new Object[]{obfuscatedSig});
         } catch (Exception e) {
-            throw new DecryptException("Could not get decrypt signature", e);
+            throw new DeobfuscateException("Could not get deobfuscate signature", e);
         } finally {
             Context.exit();
         }
         return result == null ? "" : result.toString();
     }
 
-    private String getDecryptionFuncName(final String playerCode) throws DecryptException {
+    private String getDeobfuscationFuncName(final String playerCode) throws DeobfuscateException {
         Parser.RegexException exception = null;
         for (final String regex : REGEXES) {
             try {
@@ -833,7 +847,7 @@ public class YoutubeStreamExtractor extends StreamExtractor {
                 }
             }
         }
-        throw new DecryptException("Could not find decrypt function with any of the given patterns.", exception);
+        throw new DeobfuscateException("Could not find deobfuscate function with any of the given patterns.", exception);
     }
 
     @Nonnull
@@ -987,18 +1001,19 @@ public class YoutubeStreamExtractor extends StreamExtractor {
                         if (formatData.has("url")) {
                             streamUrl = formatData.getString("url");
                         } else {
-                            // this url has an encrypted signature
+                            // this url has an obfuscated signature
                             final String cipherString = formatData.has("cipher")
                                     ? formatData.getString("cipher")
                                     : formatData.getString("signatureCipher");
                             final Map<String, String> cipher = Parser.compatParseMap(cipherString);
                             streamUrl = cipher.get("url") + "&" + cipher.get("sp") + "="
-                                    + decryptSignature(cipher.get("s"), decryptionCode);
+                                    + deobfuscateSignature(cipher.get("s"), deobfuscationCode);
                         }
 
                         urlAndItags.put(streamUrl, itagItem);
                     }
-                } catch (UnsupportedEncodingException ignored) {}
+                } catch (UnsupportedEncodingException ignored) {
+                }
             }
         }
 
@@ -1009,12 +1024,18 @@ public class YoutubeStreamExtractor extends StreamExtractor {
     @Override
     public List<Frameset> getFrames() throws ExtractionException {
         try {
-            JsonObject jo = initialAjaxJson.getObject(2).getObject("player");
-            final String resp = jo.getObject("args").getString("player_response");
-            jo = JsonParser.object().from(resp);
-            final String[] spec = jo.getObject("storyboards").getObject("playerStoryboardSpecRenderer").getString("spec").split("\\|");
+            final JsonObject storyboards = playerResponse.getObject("storyboards");
+            final JsonObject storyboardsRenderer;
+            if (storyboards.has("playerLiveStoryboardSpecRenderer")) {
+                storyboardsRenderer = storyboards.getObject("playerLiveStoryboardSpecRenderer");
+            } else {
+                storyboardsRenderer = storyboards.getObject("playerStoryboardSpecRenderer");
+            }
+
+            final String[] spec = storyboardsRenderer.getString("spec").split("\\|");
             final String url = spec[0];
             final ArrayList<Frameset> result = new ArrayList<>(spec.length - 1);
+
             for (int i = 1; i < spec.length; ++i) {
                 final String[] parts = spec[i].split("#");
                 if (parts.length != 8) {
@@ -1084,7 +1105,7 @@ public class YoutubeStreamExtractor extends StreamExtractor {
     @Nonnull
     @Override
     public List<String> getTags() {
-        return new ArrayList<>();
+        return Collections.emptyList();
     }
 
     @Nonnull
