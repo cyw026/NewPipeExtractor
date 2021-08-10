@@ -1,8 +1,9 @@
 package org.schabi.newpipe.extractor.services.soundcloud.search;
 
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
-import org.schabi.newpipe.DownloaderTestImpl;
+import org.schabi.newpipe.downloader.DownloaderTestImpl;
 import org.schabi.newpipe.extractor.NewPipe;
 
 import static java.util.Arrays.asList;

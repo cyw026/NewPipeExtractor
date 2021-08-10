@@ -2,8 +2,10 @@ package org.schabi.newpipe.extractor.services.youtube.extractors;
 
 import com.grack.nanojson.JsonObject;
 
+import org.schabi.newpipe.extractor.ListExtractor;
 import org.schabi.newpipe.extractor.channel.ChannelInfoItemExtractor;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
+import org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper;
 import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeChannelLinkHandlerFactory;
 import org.schabi.newpipe.extractor.utils.Utils;
 
@@ -86,7 +88,7 @@ public class YoutubeChannelInfoItemExtractor implements ChannelInfoItemExtractor
         try {
             if (!channelInfoItem.has("videoCountText")) {
                 // Video count is not available, channel probably has no public uploads.
-                return -1;
+                return ListExtractor.ITEM_COUNT_UNKNOWN;
             }
 
             return Long.parseLong(Utils.removeNonDigitCharacters(getTextFromObject(
@@ -94,6 +96,11 @@ public class YoutubeChannelInfoItemExtractor implements ChannelInfoItemExtractor
         } catch (Exception e) {
             throw new ParsingException("Could not get stream count", e);
         }
+    }
+
+    @Override
+    public boolean isVerified() throws ParsingException {
+        return YoutubeParsingHelper.isVerified(channelInfoItem.getArray("ownerBadges"));
     }
 
     @Override

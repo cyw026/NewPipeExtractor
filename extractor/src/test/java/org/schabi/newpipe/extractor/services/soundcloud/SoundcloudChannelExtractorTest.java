@@ -2,7 +2,7 @@ package org.schabi.newpipe.extractor.services.soundcloud;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.schabi.newpipe.DownloaderTestImpl;
+import org.schabi.newpipe.downloader.DownloaderTestImpl;
 import org.schabi.newpipe.extractor.NewPipe;
 import org.schabi.newpipe.extractor.channel.ChannelExtractor;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
@@ -101,6 +101,11 @@ public class SoundcloudChannelExtractorTest {
         public void testSubscriberCount() {
             assertTrue("Wrong subscriber count", extractor.getSubscriberCount() >= 1e6);
         }
+
+        @Override
+        public void testVerified() throws Exception {
+            assertTrue(extractor.isVerified());
+        }
     }
 
     public static class DubMatix implements BaseChannelExtractorTest {
@@ -194,6 +199,11 @@ public class SoundcloudChannelExtractorTest {
         @Test
         public void testSubscriberCount() {
             assertTrue("Wrong subscriber count", extractor.getSubscriberCount() >= 2e6);
+        }
+
+        @Override
+        public void testVerified() throws Exception {
+            assertTrue(extractor.isVerified());
         }
     }
 }

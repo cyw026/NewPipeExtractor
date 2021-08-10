@@ -2,7 +2,7 @@ package org.schabi.newpipe.extractor.services.youtube.search;
 
 import org.junit.BeforeClass;
 import org.junit.Ignore;
-import org.schabi.newpipe.DownloaderTestImpl;
+import org.schabi.newpipe.downloader.DownloaderTestImpl;
 import org.schabi.newpipe.extractor.InfoItem;
 import org.schabi.newpipe.extractor.NewPipe;
 import org.schabi.newpipe.extractor.StreamingService;
@@ -17,6 +17,7 @@ import javax.annotation.Nullable;
 import static java.util.Collections.singletonList;
 import static org.schabi.newpipe.extractor.ServiceList.YouTube;
 
+// Doesn't work with mocks. Makes request with different `dataToSend` I think
 public class YoutubeMusicSearchExtractorTest {
     public static class MusicSongs extends DefaultSearchExtractorTest {
         private static SearchExtractor extractor;
@@ -132,6 +133,7 @@ public class YoutubeMusicSearchExtractorTest {
     public static class Suggestion extends DefaultSearchExtractorTest {
         private static SearchExtractor extractor;
         private static final String QUERY = "megaman x3";
+        private static final boolean CORRECTED = true;
 
         @BeforeClass
         public static void setUp() throws Exception {
@@ -149,6 +151,7 @@ public class YoutubeMusicSearchExtractorTest {
         @Override public String expectedSearchString() { return QUERY; }
         @Nullable @Override public String expectedSearchSuggestion() { return "mega man x3"; }
         @Override public InfoItem.InfoType expectedInfoItemType() { return InfoItem.InfoType.STREAM; }
+        @Override public boolean isCorrectedSearch() { return CORRECTED; }
     }
 
     public static class CorrectedSearch extends DefaultSearchExtractorTest {

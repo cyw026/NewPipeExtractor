@@ -20,8 +20,12 @@ package org.schabi.newpipe.extractor.stream;
  * along with NewPipe.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import org.schabi.newpipe.extractor.InfoItem;
+import org.schabi.newpipe.extractor.InfoItemsCollector;
+import org.schabi.newpipe.extractor.InfoItemExtractor;
 import org.schabi.newpipe.extractor.Extractor;
 import org.schabi.newpipe.extractor.MediaFormat;
+import org.schabi.newpipe.extractor.MetaInfo;
 import org.schabi.newpipe.extractor.StreamingService;
 import org.schabi.newpipe.extractor.channel.ChannelExtractor;
 import org.schabi.newpipe.extractor.exceptions.ExtractionException;
@@ -30,13 +34,12 @@ import org.schabi.newpipe.extractor.linkhandler.LinkHandler;
 import org.schabi.newpipe.extractor.localization.DateWrapper;
 import org.schabi.newpipe.extractor.utils.Parser;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 /**
  * Scrapes information from a video/audio streaming service (eg, YouTube).
@@ -169,6 +172,15 @@ public abstract class StreamExtractor extends Extractor {
      */
     @Nonnull
     public abstract String getUploaderName() throws ParsingException;
+
+    /**
+     * Whether the uploader has been verified by the service's provider.
+     * If there is no verification implemented, return <code>false</code>.
+     *
+     * @return whether the uploader has been verified by the service's provider
+     * @throws ParsingException
+     */
+    public abstract boolean isUploaderVerified() throws ParsingException;
 
     /**
      * The url to the image file/profile picture/avatar of the creator/uploader of the stream.
@@ -322,7 +334,24 @@ public abstract class StreamExtractor extends Extractor {
      * @throws ExtractionException
      */
     @Nullable
-    public abstract StreamInfoItemsCollector getRelatedStreams() throws IOException, ExtractionException;
+    public abstract InfoItemsCollector<? extends InfoItem, ? extends InfoItemExtractor>
+    getRelatedItems() throws IOException, ExtractionException;
+
+    /**
+     * @deprecated Use {@link #getRelatedItems()}. May be removed in a future version.
+     * @return The result of {@link #getRelatedItems()} if it is a
+     *         StreamInfoItemsCollector, null otherwise
+     * @throws IOException
+     * @throws ExtractionException
+     */
+    @Deprecated
+    @Nullable
+    public StreamInfoItemsCollector getRelatedStreams() throws IOException, ExtractionException {
+        InfoItemsCollector<?, ?> collector = getRelatedItems();
+        if (collector instanceof StreamInfoItemsCollector) {
+            return (StreamInfoItemsCollector) collector;
+        } else return null;
+    }
 
     /**
      * Should return a list of Frameset object that contains preview of stream frames
@@ -419,8 +448,7 @@ public abstract class StreamExtractor extends Extractor {
      * @return the privacy of the stream or an empty String.
      * @throws ParsingException
      */
-    @Nonnull
-    public abstract String getPrivacy() throws ParsingException;
+    public abstract Privacy getPrivacy() throws ParsingException;
 
     /**
      * The name of the category of the stream.
@@ -458,7 +486,7 @@ public abstract class StreamExtractor extends Extractor {
      * The list of tags of the stream.
      * If the tag list is not available you can simply return an empty list.
      *
-     * @return the list of tags of the stream or an empty list.
+     * @return the list of tags of the stream or Collections.emptyList().
      * @throws ParsingException
      */
     @Nonnull
@@ -476,4 +504,36 @@ public abstract class StreamExtractor extends Extractor {
      */
     @Nonnull
     public abstract String getSupportInfo() throws ParsingException;
+
+    /**
+     * The list of stream segments by timestamps for the stream.
+     * If the segment list is not available you can simply return an empty list.
+     *
+     * @return The list of segments of the stream or an empty list.
+     * @throws ParsingException
+     */
+    @Nonnull
+    public abstract List<StreamSegment> getStreamSegments() throws ParsingException;
+
+    /**
+     * Meta information about the stream.
+     * <p>
+     * This can be information about the stream creator (e.g. if the creator is a public broadcaster)
+     * or further information on the topic (e.g. hints that the video might contain conspiracy theories
+     * or contains information about a current health situation like the Covid-19 pandemic).
+     * </p>
+     * The meta information often contains links to external sources like Wikipedia or the WHO.
+     *
+     * @return The meta info of the stream or an empty List if not provided.
+     * @throws ParsingException
+     */
+    @Nonnull
+    public abstract List<MetaInfo> getMetaInfo() throws ParsingException;
+    public enum Privacy {
+        PUBLIC,
+        UNLISTED,
+        PRIVATE,
+        INTERNAL,
+        OTHER
+    }
 }

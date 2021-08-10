@@ -2,19 +2,22 @@ package org.schabi.newpipe.extractor.services.youtube;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.schabi.newpipe.DownloaderTestImpl;
+import org.schabi.newpipe.downloader.DownloaderFactory;
 import org.schabi.newpipe.extractor.ListExtractor.InfoItemsPage;
 import org.schabi.newpipe.extractor.NewPipe;
 import org.schabi.newpipe.extractor.Page;
 import org.schabi.newpipe.extractor.comments.CommentsInfo;
 import org.schabi.newpipe.extractor.comments.CommentsInfoItem;
 import org.schabi.newpipe.extractor.exceptions.ExtractionException;
+import org.schabi.newpipe.extractor.localization.Localization;
 import org.schabi.newpipe.extractor.services.DefaultTests;
 import org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeCommentsExtractor;
 import org.schabi.newpipe.extractor.utils.Utils;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Locale;
+import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -23,18 +26,21 @@ import static org.junit.Assert.assertTrue;
 import static org.schabi.newpipe.extractor.ServiceList.YouTube;
 
 public class YoutubeCommentsExtractorTest {
+    private static final String RESOURCE_PATH = DownloaderFactory.RESOURCE_PATH + "services/youtube/extractor/comments/";
+
     /**
      * Test a "normal" YouTube
      */
     public static class Thomas {
         private static final String url = "https://www.youtube.com/watch?v=D00Au7k3i6o";
+        private static final String commentContent = "Category: Education";
         private static YoutubeCommentsExtractor extractor;
-
-        private static final String commentContent = "sub 4 sub";
 
         @BeforeClass
         public static void setUp() throws Exception {
-            NewPipe.init(DownloaderTestImpl.getInstance());
+            YoutubeParsingHelper.resetClientVersionAndKey();
+            YoutubeParsingHelper.setNumberGenerator(new Random(1));
+            NewPipe.init(new DownloaderFactory().getDownloader(RESOURCE_PATH + "thomas"));
             extractor = (YoutubeCommentsExtractor) YouTube
                     .getCommentsExtractor(url);
             extractor.fetchPage();
@@ -94,7 +100,7 @@ public class YoutubeCommentsExtractorTest {
                 assertNotNull(c.getUploadDate());
                 assertFalse(Utils.isBlank(c.getThumbnailUrl()));
                 assertFalse(Utils.isBlank(c.getUrl()));
-                assertFalse(c.getLikeCount() < 0);
+                assertTrue(c.getLikeCount() >= 0);
             }
         }
 
@@ -116,12 +122,14 @@ public class YoutubeCommentsExtractorTest {
      * Test a video with an empty comment
      */
     public static class EmptyComment {
-        private static YoutubeCommentsExtractor extractor;
         private final static String url = "https://www.youtube.com/watch?v=VM_6n762j6M";
+        private static YoutubeCommentsExtractor extractor;
 
         @BeforeClass
         public static void setUp() throws Exception {
-            NewPipe.init(DownloaderTestImpl.getInstance());
+            YoutubeParsingHelper.resetClientVersionAndKey();
+            YoutubeParsingHelper.setNumberGenerator(new Random(1));
+            NewPipe.init(new DownloaderFactory().getDownloader(RESOURCE_PATH + "empty"));
             extractor = (YoutubeCommentsExtractor) YouTube
                     .getCommentsExtractor(url);
             extractor.fetchPage();
@@ -142,7 +150,7 @@ public class YoutubeCommentsExtractorTest {
                 assertNotNull(c.getUploadDate());
                 assertFalse(Utils.isBlank(c.getThumbnailUrl()));
                 assertFalse(Utils.isBlank(c.getUrl()));
-                assertFalse(c.getLikeCount() < 0);
+                assertTrue(c.getLikeCount() >= 0);
                 if (c.getCommentId().equals("Ugga_h1-EXdHB3gCoAEC")) { // comment without text
                     assertTrue(Utils.isBlank(c.getCommentText()));
                 } else {
@@ -151,5 +159,151 @@ public class YoutubeCommentsExtractorTest {
             }
         }
 
+    }
+
+    public static class HeartedByCreator {
+        private final static String url = "https://www.youtube.com/watch?v=tR11b7uh17Y";
+        private static YoutubeCommentsExtractor extractor;
+
+        @BeforeClass
+        public static void setUp() throws Exception {
+            YoutubeParsingHelper.resetClientVersionAndKey();
+            YoutubeParsingHelper.setNumberGenerator(new Random(1));
+            NewPipe.init(new DownloaderFactory().getDownloader(RESOURCE_PATH + "hearted"));
+            extractor = (YoutubeCommentsExtractor) YouTube
+                    .getCommentsExtractor(url);
+            extractor.fetchPage();
+        }
+
+        @Test
+        public void testGetCommentsAllData() throws IOException, ExtractionException {
+            final InfoItemsPage<CommentsInfoItem> comments = extractor.getInitialPage();
+
+            DefaultTests.defaultTestListOfItems(YouTube, comments.getItems(), comments.getErrors());
+
+            boolean heartedByUploader = false;
+
+            for (CommentsInfoItem c : comments.getItems()) {
+                assertFalse(Utils.isBlank(c.getUploaderUrl()));
+                assertFalse(Utils.isBlank(c.getUploaderName()));
+                assertFalse(Utils.isBlank(c.getUploaderAvatarUrl()));
+                assertFalse(Utils.isBlank(c.getCommentId()));
+                assertFalse(Utils.isBlank(c.getName()));
+                assertFalse(Utils.isBlank(c.getTextualUploadDate()));
+                assertNotNull(c.getUploadDate());
+                assertFalse(Utils.isBlank(c.getThumbnailUrl()));
+                assertFalse(Utils.isBlank(c.getUrl()));
+                assertTrue(c.getLikeCount() >= 0);
+                assertFalse(Utils.isBlank(c.getCommentText()));
+                if (c.isHeartedByUploader()) {
+                    heartedByUploader = true;
+                }
+            }
+            assertTrue("No comments was hearted by uploader", heartedByUploader);
+
+        }
+    }
+
+    public static class Pinned {
+        private final static String url = "https://www.youtube.com/watch?v=bjFtFMilb34";
+        private static YoutubeCommentsExtractor extractor;
+
+        @BeforeClass
+        public static void setUp() throws Exception {
+            YoutubeParsingHelper.resetClientVersionAndKey();
+            YoutubeParsingHelper.setNumberGenerator(new Random(1));
+            NewPipe.init(new DownloaderFactory().getDownloader(RESOURCE_PATH + "pinned"));
+            extractor = (YoutubeCommentsExtractor) YouTube
+                    .getCommentsExtractor(url);
+            extractor.fetchPage();
+        }
+
+        @Test
+        public void testGetCommentsAllData() throws IOException, ExtractionException {
+            final InfoItemsPage<CommentsInfoItem> comments = extractor.getInitialPage();
+
+            DefaultTests.defaultTestListOfItems(YouTube, comments.getItems(), comments.getErrors());
+
+            for (CommentsInfoItem c : comments.getItems()) {
+                assertFalse(Utils.isBlank(c.getUploaderUrl()));
+                assertFalse(Utils.isBlank(c.getUploaderName()));
+                assertFalse(Utils.isBlank(c.getUploaderAvatarUrl()));
+                assertFalse(Utils.isBlank(c.getCommentId()));
+                assertFalse(Utils.isBlank(c.getName()));
+                assertFalse(Utils.isBlank(c.getTextualUploadDate()));
+                assertNotNull(c.getUploadDate());
+                assertFalse(Utils.isBlank(c.getThumbnailUrl()));
+                assertFalse(Utils.isBlank(c.getUrl()));
+                assertTrue(c.getLikeCount() >= 0);
+                assertFalse(Utils.isBlank(c.getCommentText()));
+            }
+
+            assertTrue("First comment isn't pinned", comments.getItems().get(0).isPinned());
+        }
+    }
+
+    /**
+     * Checks if the likes/votes are handled correctly<br/>
+     * A pinned comment with >15K likes is used for the test
+     */
+    public static class LikesVotes {
+        private final static String url = "https://www.youtube.com/watch?v=QqsLTNkzvaY";
+        private static YoutubeCommentsExtractor extractor;
+
+        @BeforeClass
+        public static void setUp() throws Exception {
+            YoutubeParsingHelper.resetClientVersionAndKey();
+            YoutubeParsingHelper.setNumberGenerator(new Random(1));
+            NewPipe.init(new DownloaderFactory().getDownloader(RESOURCE_PATH + "likes"));
+            extractor = (YoutubeCommentsExtractor) YouTube
+                    .getCommentsExtractor(url);
+            extractor.fetchPage();
+        }
+
+        @Test
+        public void testGetCommentsFirst() throws IOException, ExtractionException {
+            final InfoItemsPage<CommentsInfoItem> comments = extractor.getInitialPage();
+
+            DefaultTests.defaultTestListOfItems(YouTube, comments.getItems(), comments.getErrors());
+
+            CommentsInfoItem pinnedComment = comments.getItems().get(0);
+
+            assertTrue("First comment isn't pinned", pinnedComment.isPinned());
+            assertTrue("The first pinned comment has no likes", pinnedComment.getLikeCount() > 0);
+            assertTrue("The first pinned comment has no vote count", !Utils.isBlank(pinnedComment.getTextualLikeCount()));
+        }
+    }
+
+    /**
+     * Checks if the vote count works localized<br/>
+     * A pinned comment with >15K likes is used for the test
+     */
+    public static class LocalizedVoteCount {
+        private final static String url = "https://www.youtube.com/watch?v=QqsLTNkzvaY";
+        private static YoutubeCommentsExtractor extractor;
+
+        @BeforeClass
+        public static void setUp() throws Exception {
+            YoutubeParsingHelper.resetClientVersionAndKey();
+            YoutubeParsingHelper.setNumberGenerator(new Random(1));
+            NewPipe.init(new DownloaderFactory().getDownloader(RESOURCE_PATH + "localized_vote_count"));
+            extractor = (YoutubeCommentsExtractor) YouTube
+                    .getCommentsExtractor(url);
+            // Force non english local here
+            extractor.forceLocalization(Localization.fromLocale(Locale.GERMANY));
+            extractor.fetchPage();
+        }
+
+        @Test
+        public void testGetCommentsFirst() throws IOException, ExtractionException {
+            final InfoItemsPage<CommentsInfoItem> comments = extractor.getInitialPage();
+
+            DefaultTests.defaultTestListOfItems(YouTube, comments.getItems(), comments.getErrors());
+
+            CommentsInfoItem pinnedComment = comments.getItems().get(0);
+
+            assertTrue("First comment isn't pinned", pinnedComment.isPinned());
+            assertTrue("The first pinned comment has no vote count", !Utils.isBlank(pinnedComment.getTextualLikeCount()));
+        }
     }
 }

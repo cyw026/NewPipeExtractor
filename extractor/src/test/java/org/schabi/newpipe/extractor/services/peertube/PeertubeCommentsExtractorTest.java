@@ -2,7 +2,7 @@ package org.schabi.newpipe.extractor.services.peertube;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.schabi.newpipe.DownloaderTestImpl;
+import org.schabi.newpipe.downloader.DownloaderTestImpl;
 import org.schabi.newpipe.extractor.ListExtractor.InfoItemsPage;
 import org.schabi.newpipe.extractor.NewPipe;
 import org.schabi.newpipe.extractor.Page;
@@ -75,7 +75,8 @@ public class PeertubeCommentsExtractorTest {
                 assertFalse(Utils.isBlank(c.getTextualUploadDate()));
                 assertFalse(Utils.isBlank(c.getThumbnailUrl()));
                 assertFalse(Utils.isBlank(c.getUrl()));
-                assertFalse(c.getLikeCount() != -1);
+                assertEquals(-1, c.getLikeCount());
+                assertTrue(Utils.isBlank(c.getTextualLikeCount()));
             }
         }
 

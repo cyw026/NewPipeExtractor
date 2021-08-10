@@ -1,8 +1,9 @@
 package org.schabi.newpipe.extractor.services.soundcloud;
 
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
-import org.schabi.newpipe.DownloaderTestImpl;
+import org.schabi.newpipe.downloader.DownloaderTestImpl;
 import org.schabi.newpipe.extractor.ListExtractor;
 import org.schabi.newpipe.extractor.NewPipe;
 import org.schabi.newpipe.extractor.playlist.PlaylistExtractor;
@@ -110,6 +111,11 @@ public class SoundcloudPlaylistExtractorTest {
         public void testStreamCount() {
             assertTrue("Stream count does not fit: " + extractor.getStreamCount(), extractor.getStreamCount() >= 10);
         }
+
+        @Override
+        public void testUploaderVerified() throws Exception {
+            assertTrue(extractor.isUploaderVerified());
+        }
     }
 
     public static class RandomHouseMusic implements BasePlaylistExtractorTest {
@@ -201,6 +207,11 @@ public class SoundcloudPlaylistExtractorTest {
         @Test
         public void testStreamCount() {
             assertTrue("Stream count does not fit: " + extractor.getStreamCount(), extractor.getStreamCount() >= 10);
+        }
+
+        @Override
+        public void testUploaderVerified() throws Exception {
+            assertFalse(extractor.isUploaderVerified());
         }
     }
 
@@ -309,6 +320,11 @@ public class SoundcloudPlaylistExtractorTest {
         public void testStreamCount() {
             assertTrue("Stream count does not fit: " + extractor.getStreamCount(), extractor.getStreamCount() >= 370);
         }
+
+        @Override
+        public void testUploaderVerified() throws Exception {
+            assertFalse(extractor.isUploaderVerified());
+        }
     }
 
     public static class SmallPlaylist implements BasePlaylistExtractorTest {
@@ -361,6 +377,7 @@ public class SoundcloudPlaylistExtractorTest {
         }
 
         @Test
+        @Ignore("Test broken? Playlist has 2 entries, each page has 1 entry meaning it has 2 pages.")
         public void testMoreRelatedItems() throws Exception {
             try {
                 defaultTestMoreItems(extractor);
@@ -406,6 +423,11 @@ public class SoundcloudPlaylistExtractorTest {
         @Test
         public void testStreamCount() {
             assertEquals(2, extractor.getStreamCount());
+        }
+
+        @Override
+        public void testUploaderVerified() throws Exception {
+            assertFalse(extractor.isUploaderVerified());
         }
     }
 }

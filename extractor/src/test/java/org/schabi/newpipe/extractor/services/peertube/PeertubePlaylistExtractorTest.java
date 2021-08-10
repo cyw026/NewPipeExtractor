@@ -1,8 +1,10 @@
 package org.schabi.newpipe.extractor.services.peertube;
 
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
-import org.schabi.newpipe.DownloaderTestImpl;
+import org.schabi.newpipe.downloader.DownloaderTestImpl;
+import org.schabi.newpipe.extractor.ExtractorAsserts;
 import org.schabi.newpipe.extractor.NewPipe;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.services.peertube.extractors.PeertubePlaylistExtractor;
@@ -29,6 +31,7 @@ public class PeertubePlaylistExtractorTest {
         }
 
         @Test
+        @Ignore("URL changes with every request")
         public void testGetThumbnailUrl() throws ParsingException {
             assertEquals("https://framatube.org/static/thumbnails/playlist-96b0ee2b-a5a7-4794-8769-58d8ccb79ab7.jpg", extractor.getThumbnailUrl());
         }
@@ -50,7 +53,7 @@ public class PeertubePlaylistExtractorTest {
 
         @Test
         public void testGetStreamCount() throws ParsingException {
-            assertEquals(35, extractor.getStreamCount());
+            ExtractorAsserts.assertAtLeast(39, extractor.getStreamCount());
         }
 
         @Test
