@@ -8,10 +8,13 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.List;
 
+import static org.schabi.newpipe.extractor.utils.Utils.UTF_8;
+
 public class PeertubeSearchQueryHandlerFactory extends SearchQueryHandlerFactory {
 
-    public static final String CHARSET_UTF_8 = "UTF-8";
     public static final String VIDEOS = "videos";
+    public static final String SEPIA_VIDEOS = "sepia_videos"; // sepia is the global index
+    public static final String SEPIA_BASE_URL = "https://sepiasearch.org";
     public static final String SEARCH_ENDPOINT = "/api/v1/search/videos";
 
     public static PeertubeSearchQueryHandlerFactory getInstance() {
@@ -20,17 +23,19 @@ public class PeertubeSearchQueryHandlerFactory extends SearchQueryHandlerFactory
 
     @Override
     public String getUrl(String searchString, List<String> contentFilters, String sortFilter) throws ParsingException {
-        String baseUrl = ServiceList.PeerTube.getBaseUrl();
+        String baseUrl;
+        if (!contentFilters.isEmpty() && contentFilters.get(0).startsWith("sepia_")) {
+            baseUrl = SEPIA_BASE_URL;
+        } else {
+            baseUrl = ServiceList.PeerTube.getBaseUrl();
+        }
         return getUrl(searchString, contentFilters, sortFilter, baseUrl);
     }
 
     @Override
     public String getUrl(String searchString, List<String> contentFilters, String sortFilter, String baseUrl) throws ParsingException {
         try {
-            final String url = baseUrl + SEARCH_ENDPOINT
-                    + "?search=" + URLEncoder.encode(searchString, CHARSET_UTF_8);
-
-            return url;
+            return baseUrl + SEARCH_ENDPOINT + "?search=" + URLEncoder.encode(searchString, UTF_8);
         } catch (UnsupportedEncodingException e) {
             throw new ParsingException("Could not encode query", e);
         }
@@ -38,6 +43,9 @@ public class PeertubeSearchQueryHandlerFactory extends SearchQueryHandlerFactory
 
     @Override
     public String[] getAvailableContentFilter() {
-        return new String[]{VIDEOS};
+        return new String[]{
+                VIDEOS,
+                SEPIA_VIDEOS
+        };
     }
 }

@@ -21,9 +21,9 @@ package org.schabi.newpipe.extractor.exceptions;
  */
 
 public class ReCaptchaException extends ExtractionException {
-    private String url;
+    private final String url;
 
-    public ReCaptchaException(String message, String url) {
+    public ReCaptchaException(final String message, final String url) {
         super(message);
         this.url = url;
     }

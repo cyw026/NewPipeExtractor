@@ -22,11 +22,13 @@ package org.schabi.newpipe.extractor.services.youtube;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.schabi.newpipe.DownloaderTestImpl;
+import org.schabi.newpipe.downloader.DownloaderFactory;
 import org.schabi.newpipe.extractor.NewPipe;
 import org.schabi.newpipe.extractor.StreamingService;
 import org.schabi.newpipe.extractor.kiosk.KioskInfo;
 import org.schabi.newpipe.extractor.linkhandler.LinkHandlerFactory;
+
+import java.util.Random;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -36,14 +38,18 @@ import static org.schabi.newpipe.extractor.ServiceList.YouTube;
  * Test for {@link KioskInfo}
  */
 public class YoutubeTrendingKioskInfoTest {
+
+    private static final String RESOURCE_PATH = DownloaderFactory.RESOURCE_PATH + "kiosk";
+
     static KioskInfo kioskInfo;
 
     @BeforeClass
     public static void setUp()
             throws Exception {
-        NewPipe.init(DownloaderTestImpl.getInstance());
-        StreamingService service = YouTube;
-        LinkHandlerFactory LinkHandlerFactory = service.getKioskList().getListLinkHandlerFactoryByType("Trending");
+        YoutubeParsingHelper.resetClientVersionAndKey();
+        YoutubeParsingHelper.setNumberGenerator(new Random(1));
+        NewPipe.init(new DownloaderFactory().getDownloader(RESOURCE_PATH));
+        LinkHandlerFactory LinkHandlerFactory = ((StreamingService) YouTube).getKioskList().getListLinkHandlerFactoryByType("Trending");
 
         kioskInfo = KioskInfo.getInfo(YouTube, LinkHandlerFactory.fromId("Trending").getUrl());
     }

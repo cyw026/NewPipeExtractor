@@ -22,13 +22,14 @@ package org.schabi.newpipe.extractor.services.youtube;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.schabi.newpipe.DownloaderTestImpl;
+import org.schabi.newpipe.downloader.DownloaderFactory;
 import org.schabi.newpipe.extractor.NewPipe;
 import org.schabi.newpipe.extractor.exceptions.ExtractionException;
 import org.schabi.newpipe.extractor.localization.Localization;
 import org.schabi.newpipe.extractor.suggestion.SuggestionExtractor;
 
 import java.io.IOException;
+import java.util.Random;
 
 import static org.junit.Assert.assertFalse;
 import static org.schabi.newpipe.extractor.ServiceList.YouTube;
@@ -37,11 +38,16 @@ import static org.schabi.newpipe.extractor.ServiceList.YouTube;
  * Test for {@link SuggestionExtractor}
  */
 public class YoutubeSuggestionExtractorTest {
+
+    private static final String RESOURCE_PATH = DownloaderFactory.RESOURCE_PATH + "services/youtube/extractor/suggestions/";
+
     private static SuggestionExtractor suggestionExtractor;
 
     @BeforeClass
     public static void setUp() throws Exception {
-        NewPipe.init(DownloaderTestImpl.getInstance(), new Localization("de", "DE"));
+        YoutubeParsingHelper.resetClientVersionAndKey();
+        YoutubeParsingHelper.setNumberGenerator(new Random(1));
+        NewPipe.init(new DownloaderFactory().getDownloader(RESOURCE_PATH + ""), new Localization("de", "DE"));
         suggestionExtractor = YouTube.getSuggestionExtractor();
     }
 

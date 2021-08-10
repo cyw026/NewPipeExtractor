@@ -1,28 +1,36 @@
 package org.schabi.newpipe.extractor.services.youtube.stream;
 
 import org.junit.BeforeClass;
-import org.schabi.newpipe.DownloaderTestImpl;
+import org.schabi.newpipe.downloader.DownloaderFactory;
 import org.schabi.newpipe.extractor.NewPipe;
 import org.schabi.newpipe.extractor.StreamingService;
 import org.schabi.newpipe.extractor.services.DefaultStreamExtractorTest;
+import org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper;
+import org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeStreamExtractor;
 import org.schabi.newpipe.extractor.stream.StreamExtractor;
 import org.schabi.newpipe.extractor.stream.StreamType;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 
 import javax.annotation.Nullable;
 
 import static org.schabi.newpipe.extractor.ServiceList.YouTube;
+import static org.schabi.newpipe.extractor.stream.StreamExtractor.Privacy.UNLISTED;
 
 public class YoutubeStreamExtractorUnlistedTest extends DefaultStreamExtractorTest {
+    private static final String RESOURCE_PATH = DownloaderFactory.RESOURCE_PATH + "services/youtube/extractor/stream/";
     static final String ID = "udsB8KnIJTg";
     static final String URL = YoutubeStreamExtractorDefaultTest.BASE_URL + ID;
     private static StreamExtractor extractor;
 
     @BeforeClass
     public static void setUp() throws Exception {
-        NewPipe.init(DownloaderTestImpl.getInstance());
+        YoutubeParsingHelper.resetClientVersionAndKey();
+        YoutubeParsingHelper.setNumberGenerator(new Random(1));
+        YoutubeStreamExtractor.resetDeobfuscationCode();
+        NewPipe.init(new DownloaderFactory().getDownloader(RESOURCE_PATH + "unlisted"));
         extractor = YouTube.getStreamExtractor(URL);
         extractor.fetchPage();
     }
@@ -47,4 +55,8 @@ public class YoutubeStreamExtractorUnlistedTest extends DefaultStreamExtractorTe
     @Nullable @Override public String expectedTextualUploadDate() { return "2017-09-22"; }
     @Override public long expectedLikeCountAtLeast() { return 110; }
     @Override public long expectedDislikeCountAtLeast() { return 0; }
+    @Override public StreamExtractor.Privacy expectedPrivacy() { return UNLISTED; }
+    @Override public String expectedLicence() { return "YouTube licence"; }
+    @Override public String expectedCategory() { return "Gaming"; }
+    @Override public List<String> expectedTags() { return Arrays.asList("dark souls", "hooked", "praise the casual"); }
 }

@@ -3,7 +3,7 @@ package org.schabi.newpipe.extractor.services.soundcloud;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.schabi.newpipe.DownloaderTestImpl;
+import org.schabi.newpipe.downloader.DownloaderTestImpl;
 import org.schabi.newpipe.extractor.NewPipe;
 
 import static org.junit.Assert.assertTrue;
@@ -29,9 +29,9 @@ public class SoundcloudParsingHelperTest {
     }
 
     @Test
-    public void resolveIdWithEmbedPlayerTest() throws Exception {
-        Assert.assertEquals("26057743", SoundcloudParsingHelper.resolveIdWithEmbedPlayer("https://soundcloud.com/trapcity"));
-        Assert.assertEquals("16069159", SoundcloudParsingHelper.resolveIdWithEmbedPlayer("https://soundcloud.com/nocopyrightsounds"));
+    public void resolveIdWithWidgetApiTest() throws Exception {
+        Assert.assertEquals("26057743", SoundcloudParsingHelper.resolveIdWithWidgetApi("https://soundcloud.com/trapcity"));
+        Assert.assertEquals("16069159", SoundcloudParsingHelper.resolveIdWithWidgetApi("https://soundcloud.com/nocopyrightsounds"));
 
     }
 

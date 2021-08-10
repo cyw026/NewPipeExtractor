@@ -2,20 +2,23 @@ package org.schabi.newpipe.extractor.services.youtube;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.schabi.newpipe.DownloaderTestImpl;
+import org.schabi.newpipe.downloader.DownloaderFactory;
+import org.schabi.newpipe.downloader.DownloaderTestImpl;
 import org.schabi.newpipe.extractor.NewPipe;
 import org.schabi.newpipe.extractor.channel.ChannelExtractor;
+import org.schabi.newpipe.extractor.exceptions.AccountTerminatedException;
 import org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException;
 import org.schabi.newpipe.extractor.exceptions.ContentNotSupportedException;
-import org.schabi.newpipe.extractor.exceptions.ExtractionException;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.services.BaseChannelExtractorTest;
 import org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeChannelExtractor;
 
 import java.io.IOException;
+import java.util.Random;
 
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
-import static org.schabi.newpipe.extractor.ExtractorAsserts.assertEmpty;
 import static org.schabi.newpipe.extractor.ExtractorAsserts.assertIsSecureUrl;
 import static org.schabi.newpipe.extractor.ServiceList.YouTube;
 import static org.schabi.newpipe.extractor.services.DefaultTests.*;
@@ -25,10 +28,14 @@ import static org.schabi.newpipe.extractor.services.DefaultTests.*;
  */
 public class YoutubeChannelExtractorTest {
 
+    private static final String RESOURCE_PATH = DownloaderFactory.RESOURCE_PATH + "services/youtube/extractor/channel/";
+
     public static class NotAvailable {
         @BeforeClass
-        public static void setUp() {
-            NewPipe.init(DownloaderTestImpl.getInstance());
+        public static void setUp() throws IOException {
+            YoutubeParsingHelper.resetClientVersionAndKey();
+            YoutubeParsingHelper.setNumberGenerator(new Random(1));
+            NewPipe.init(new DownloaderFactory().getDownloader(RESOURCE_PATH + "notAvailable"));
         }
 
         @Test(expected = ContentNotAvailableException.class)
@@ -44,12 +51,98 @@ public class YoutubeChannelExtractorTest {
                     YouTube.getChannelExtractor("https://www.youtube.com/channel/DOESNT-EXIST");
             extractor.fetchPage();
         }
+
+        @Test(expected = AccountTerminatedException.class)
+        public void accountTerminatedTOSFetch() throws Exception {
+            // "This account has been terminated for a violation of YouTube's Terms of Service."
+            final ChannelExtractor extractor =
+                    YouTube.getChannelExtractor("https://www.youtube.com/channel/UCTGjY2I-ZUGnwVoWAGRd7XQ");
+            try {
+                extractor.fetchPage();
+            } catch (final AccountTerminatedException e) {
+                assertEquals(e.getReason(), AccountTerminatedException.Reason.VIOLATION);
+                throw e;
+            }
+        }
+
+        @Test(expected = AccountTerminatedException.class)
+        public void accountTerminatedCommunityFetch() throws Exception {
+            // "This account has been terminated for violating YouTube's Community Guidelines."
+            final ChannelExtractor extractor =
+                    YouTube.getChannelExtractor("https://www.youtube.com/channel/UC0AuOxCr9TZ0TtEgL1zpIgA");
+            try {
+                extractor.fetchPage();
+            } catch (final AccountTerminatedException e) {
+                assertEquals(e.getReason(), AccountTerminatedException.Reason.VIOLATION);
+                throw e;
+            }
+        }
+
+        @Test(expected = AccountTerminatedException.class)
+        public void accountTerminatedHateFetch() throws Exception {
+            // "This account has been terminated due to multiple or severe violations
+            // of YouTube's policy prohibiting hate speech."
+            final ChannelExtractor extractor =
+                    YouTube.getChannelExtractor("https://www.youtube.com/channel/UCPWXIOPK-9myzek6jHR5yrg");
+            try {
+                extractor.fetchPage();
+            } catch (final AccountTerminatedException e) {
+                assertEquals(e.getReason(), AccountTerminatedException.Reason.VIOLATION);
+                throw e;
+            }
+        }
+
+        @Test(expected = AccountTerminatedException.class)
+        public void accountTerminatedBullyFetch() throws Exception {
+            // "This account has been terminated due to multiple or severe violations
+            // of YouTube's policy prohibiting content designed to harass, bully or threaten."
+            final ChannelExtractor extractor =
+                    YouTube.getChannelExtractor("https://youtube.com/channel/UCB1o7_gbFp2PLsamWxFenBg");
+            try {
+                extractor.fetchPage();
+            } catch (final AccountTerminatedException e) {
+                assertEquals(e.getReason(), AccountTerminatedException.Reason.VIOLATION);
+                throw e;
+            }
+        }
+
+        @Test(expected = AccountTerminatedException.class)
+        public void accountTerminatedSpamFetch() throws Exception {
+            // "This account has been terminated due to multiple or severe violations
+            // of YouTube's policy against spam, deceptive practices and misleading content
+            // or other Terms of Service violations."
+            final ChannelExtractor extractor =
+                    YouTube.getChannelExtractor("https://www.youtube.com/channel/UCoaO4U_p7G7AwalqSbGCZOA");
+            try {
+                extractor.fetchPage();
+            } catch (final AccountTerminatedException e) {
+                assertEquals(e.getReason(), AccountTerminatedException.Reason.VIOLATION);
+                throw e;
+            }
+        }
+
+        @Test(expected = AccountTerminatedException.class)
+        public void accountTerminatedCopyrightFetch() throws Exception {
+            // "This account has been terminated because we received multiple third-party claims
+            // of copyright infringement regarding material that the user posted."
+            final ChannelExtractor extractor =
+                    YouTube.getChannelExtractor("https://www.youtube.com/channel/UCpExuV8qJMfCaSQNL1YG6bQ");
+            try {
+                extractor.fetchPage();
+            } catch (final AccountTerminatedException e) {
+                assertEquals(e.getReason(), AccountTerminatedException.Reason.VIOLATION);
+                throw e;
+            }
+        }
+
     }
 
     public static class NotSupported {
         @BeforeClass
-        public static void setUp() {
-            NewPipe.init(DownloaderTestImpl.getInstance());
+        public static void setUp() throws IOException {
+            YoutubeParsingHelper.resetClientVersionAndKey();
+            YoutubeParsingHelper.setNumberGenerator(new Random(1));
+            NewPipe.init(new DownloaderFactory().getDownloader(RESOURCE_PATH + "notSupported"));
         }
 
         @Test(expected = ContentNotSupportedException.class)
@@ -65,7 +158,9 @@ public class YoutubeChannelExtractorTest {
 
         @BeforeClass
         public static void setUp() throws Exception {
-            NewPipe.init(DownloaderTestImpl.getInstance());
+            YoutubeParsingHelper.resetClientVersionAndKey();
+            YoutubeParsingHelper.setNumberGenerator(new Random(1));
+            NewPipe.init(new DownloaderFactory().getDownloader(RESOURCE_PATH + "gronkh"));
             extractor = (YoutubeChannelExtractor) YouTube
                     .getChannelExtractor("http://www.youtube.com/user/Gronkh");
             extractor.fetchPage();
@@ -120,7 +215,7 @@ public class YoutubeChannelExtractorTest {
 
         @Test
         public void testDescription() throws Exception {
-            assertTrue(extractor.getDescription().contains("Zart im Schmelz und süffig im Abgang. Ungebremster Spieltrieb"));
+            assertThat(extractor.getDescription(), containsString("Ungebremster Spieltrieb seit 1896."));
         }
 
         @Test
@@ -147,6 +242,12 @@ public class YoutubeChannelExtractorTest {
             assertTrue("Wrong subscriber count", extractor.getSubscriberCount() >= 0);
             assertTrue("Subscriber count too small", extractor.getSubscriberCount() >= 4e6);
         }
+
+        @Override
+        public void testVerified() throws Exception {
+            assertTrue(extractor.isVerified());
+        }
+
     }
 
     // Youtube RED/Premium ad blocking test
@@ -155,7 +256,9 @@ public class YoutubeChannelExtractorTest {
 
         @BeforeClass
         public static void setUp() throws Exception {
-            NewPipe.init(DownloaderTestImpl.getInstance());
+            YoutubeParsingHelper.resetClientVersionAndKey();
+            YoutubeParsingHelper.setNumberGenerator(new Random(1));
+            NewPipe.init(new DownloaderFactory().getDownloader(RESOURCE_PATH + "VSauce"));
             extractor = (YoutubeChannelExtractor) YouTube
                     .getChannelExtractor("https://www.youtube.com/user/Vsauce");
             extractor.fetchPage();
@@ -239,6 +342,11 @@ public class YoutubeChannelExtractorTest {
             assertTrue("Subscriber count too small", extractor.getSubscriberCount() >= 10e6);
         }
 
+        @Override
+        public void testVerified() throws Exception {
+            assertTrue(extractor.isVerified());
+        }
+
     }
 
     public static class Kurzgesagt implements BaseChannelExtractorTest {
@@ -246,20 +354,12 @@ public class YoutubeChannelExtractorTest {
 
         @BeforeClass
         public static void setUp() throws Exception {
-            NewPipe.init(DownloaderTestImpl.getInstance());
+            YoutubeParsingHelper.resetClientVersionAndKey();
+            YoutubeParsingHelper.setNumberGenerator(new Random(1));
+            NewPipe.init(new DownloaderFactory().getDownloader(RESOURCE_PATH + "kurzgesagt"));
             extractor = (YoutubeChannelExtractor) YouTube
                     .getChannelExtractor("https://www.youtube.com/channel/UCsXVk37bltHxD1rDPwtNM8Q");
             extractor.fetchPage();
-        }
-
-        /*//////////////////////////////////////////////////////////////////////////
-        // Additional Testing
-        //////////////////////////////////////////////////////////////////////////*/
-
-        @Test
-        public void testGetPageInNewExtractor() throws Exception {
-            final ChannelExtractor newExtractor = YouTube.getChannelExtractor(extractor.getUrl());
-            defaultTestGetPageInNewExtractor(extractor, newExtractor);
         }
 
         /*//////////////////////////////////////////////////////////////////////////
@@ -341,6 +441,31 @@ public class YoutubeChannelExtractorTest {
         public void testSubscriberCount() throws Exception {
             assertTrue("Wrong subscriber count", extractor.getSubscriberCount() >= 5e6);
         }
+
+        @Override
+        public void testVerified() throws Exception {
+            assertTrue(extractor.isVerified());
+        }
+    }
+
+    public static class KurzgesagtAdditional {
+
+        private static YoutubeChannelExtractor extractor;
+
+        @BeforeClass
+        public static void setUp() throws Exception {
+            // Test is not deterministic, mocks can't be used
+            NewPipe.init(DownloaderTestImpl.getInstance());
+            extractor = (YoutubeChannelExtractor) YouTube
+                    .getChannelExtractor("https://www.youtube.com/channel/UCsXVk37bltHxD1rDPwtNM8Q");
+            extractor.fetchPage();
+        }
+
+        @Test
+        public void testGetPageInNewExtractor() throws Exception {
+            final ChannelExtractor newExtractor = YouTube.getChannelExtractor(extractor.getUrl());
+            defaultTestGetPageInNewExtractor(extractor, newExtractor);
+        }
     }
 
     public static class CaptainDisillusion implements BaseChannelExtractorTest {
@@ -348,7 +473,9 @@ public class YoutubeChannelExtractorTest {
 
         @BeforeClass
         public static void setUp() throws Exception {
-            NewPipe.init(DownloaderTestImpl.getInstance());
+            YoutubeParsingHelper.resetClientVersionAndKey();
+            YoutubeParsingHelper.setNumberGenerator(new Random(1));
+            NewPipe.init(new DownloaderFactory().getDownloader(RESOURCE_PATH + "captainDisillusion"));
             extractor = (YoutubeChannelExtractor) YouTube
                     .getChannelExtractor("https://www.youtube.com/user/CaptainDisillusion/videos");
             extractor.fetchPage();
@@ -430,6 +557,11 @@ public class YoutubeChannelExtractorTest {
         public void testSubscriberCount() throws Exception {
             assertTrue("Wrong subscriber count", extractor.getSubscriberCount() >= 5e5);
         }
+
+        @Override
+        public void testVerified() throws Exception {
+            assertTrue(extractor.isVerified());
+        }
     }
 
     public static class RandomChannel implements BaseChannelExtractorTest {
@@ -437,7 +569,9 @@ public class YoutubeChannelExtractorTest {
 
         @BeforeClass
         public static void setUp() throws Exception {
-            NewPipe.init(DownloaderTestImpl.getInstance());
+            YoutubeParsingHelper.resetClientVersionAndKey();
+            YoutubeParsingHelper.setNumberGenerator(new Random(1));
+            NewPipe.init(new DownloaderFactory().getDownloader(RESOURCE_PATH + "random"));
             extractor = (YoutubeChannelExtractor) YouTube
                     .getChannelExtractor("https://www.youtube.com/channel/UCUaQMQS9lY5lit3vurpXQ6w");
             extractor.fetchPage();
@@ -485,7 +619,7 @@ public class YoutubeChannelExtractorTest {
         public void testMoreRelatedItems() {
             try {
                 defaultTestMoreItems(extractor);
-            } catch (Throwable ignored) {
+            } catch (final Throwable ignored) {
                 return;
             }
 
@@ -526,6 +660,10 @@ public class YoutubeChannelExtractorTest {
             long subscribers = extractor.getSubscriberCount();
             assertTrue("Wrong subscriber count: " + subscribers, subscribers >= 50);
         }
+
+        @Override
+        public void testVerified() throws Exception {
+            assertFalse(extractor.isVerified());
+        }
     }
 }
-

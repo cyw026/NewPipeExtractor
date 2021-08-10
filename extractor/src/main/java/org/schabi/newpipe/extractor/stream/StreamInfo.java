@@ -1,9 +1,6 @@
 package org.schabi.newpipe.extractor.stream;
 
-import org.schabi.newpipe.extractor.Info;
-import org.schabi.newpipe.extractor.InfoItem;
-import org.schabi.newpipe.extractor.NewPipe;
-import org.schabi.newpipe.extractor.StreamingService;
+import org.schabi.newpipe.extractor.*;
 import org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException;
 import org.schabi.newpipe.extractor.exceptions.ContentNotSupportedException;
 import org.schabi.newpipe.extractor.exceptions.ExtractionException;
@@ -13,8 +10,11 @@ import org.schabi.newpipe.extractor.utils.ExtractorHelper;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+
+import javax.annotation.Nonnull;
 
 import static org.schabi.newpipe.extractor.utils.Utils.isNullOrEmpty;
 
@@ -64,7 +64,7 @@ public class StreamInfo extends Info {
         return getInfo(service.getStreamExtractor(url));
     }
 
-    private static StreamInfo getInfo(StreamExtractor extractor) throws ExtractionException, IOException {
+    public static StreamInfo getInfo(StreamExtractor extractor) throws ExtractionException, IOException {
         extractor.fetchPage();
         StreamInfo streamInfo;
         try {
@@ -154,11 +154,11 @@ public class StreamInfo extends Info {
 
         // Lists can be null if a exception was thrown during extraction
         if (streamInfo.getVideoStreams() == null)
-            streamInfo.setVideoStreams(new ArrayList<VideoStream>());
+            streamInfo.setVideoStreams(Collections.emptyList());
         if (streamInfo.getVideoOnlyStreams() == null)
-            streamInfo.setVideoOnlyStreams(new ArrayList<VideoStream>());
+            streamInfo.setVideoOnlyStreams(Collections.emptyList());
         if (streamInfo.getAudioStreams() == null)
-            streamInfo.setAudioStreams(new ArrayList<AudioStream>());
+            streamInfo.setAudioStreams(Collections.emptyList());
 
         Exception dashMpdError = null;
         if (!isNullOrEmpty(streamInfo.getDashMpdUrl())) {
@@ -324,8 +324,24 @@ public class StreamInfo extends Info {
         } catch (Exception e) {
             streamInfo.addError(e);
         }
+        try {
+            streamInfo.setStreamSegments(extractor.getStreamSegments());
+        } catch (Exception e) {
+            streamInfo.addError(e);
+        }
+        try {
+            streamInfo.setMetaInfo(extractor.getMetaInfo());
+        } catch (Exception e) {
+            streamInfo.addError(e);
+        }
 
-        streamInfo.setRelatedStreams(ExtractorHelper.getRelatedVideosOrLogError(streamInfo, extractor));
+        try {
+            streamInfo.setPreviewFrames(extractor.getFrames());
+        } catch (Exception e) {
+            streamInfo.addError(e);
+        }
+
+        streamInfo.setRelatedItems(ExtractorHelper.getRelatedItemsOrLogError(streamInfo, extractor));
 
         return streamInfo;
     }
@@ -361,18 +377,25 @@ public class StreamInfo extends Info {
 
 
     private String hlsUrl = "";
-    private List<InfoItem> relatedStreams = new ArrayList<>();
+    private List<InfoItem> relatedItems = new ArrayList<>();
 
     private long startPosition = 0;
     private List<SubtitlesStream> subtitles = new ArrayList<>();
 
     private String host = "";
-    private String privacy = "";
+    private StreamExtractor.Privacy privacy;
     private String category = "";
     private String licence = "";
     private String support = "";
     private Locale language = null;
     private List<String> tags = new ArrayList<>();
+    private List<StreamSegment> streamSegments = new ArrayList<>();
+    private List<MetaInfo> metaInfo = new ArrayList<>();
+
+    /**
+     * Preview frames, e.g. for the storyboard / seekbar thumbnail preview
+     */
+    private List<Frameset> previewFrames = Collections.emptyList();
 
     /**
      * Get the stream type
@@ -591,12 +614,28 @@ public class StreamInfo extends Info {
         this.hlsUrl = hlsUrl;
     }
 
-    public List<InfoItem> getRelatedStreams() {
-        return relatedStreams;
+    public List<InfoItem> getRelatedItems() {
+        return relatedItems;
     }
 
-    public void setRelatedStreams(List<InfoItem> relatedStreams) {
-        this.relatedStreams = relatedStreams;
+    /**
+     * @deprecated Use {@link #getRelatedItems()}
+     */
+    @Deprecated
+    public List<InfoItem> getRelatedStreams() {
+        return getRelatedItems();
+    }
+
+    public void setRelatedItems(List<InfoItem> relatedItems) {
+        this.relatedItems = relatedItems;
+    }
+
+    /**
+     * @deprecated Use {@link #setRelatedItems(List)}
+     */
+    @Deprecated
+    public void setRelatedStreams(List<InfoItem> relatedItems) {
+        setRelatedItems(relatedItems);
     }
 
     public long getStartPosition() {
@@ -623,11 +662,11 @@ public class StreamInfo extends Info {
         this.host = str;
     }
 
-    public String getPrivacy() {
+    public StreamExtractor.Privacy getPrivacy() {
         return this.privacy;
     }
 
-    public void setPrivacy(String str) {
+    public void setPrivacy(StreamExtractor.Privacy str) {
         this.privacy = str;
     }
 
@@ -669,5 +708,30 @@ public class StreamInfo extends Info {
 
     public String getSupportInfo() {
         return this.support;
+    }
+
+    public List<StreamSegment> getStreamSegments() {
+        return streamSegments;
+    }
+
+    public void setStreamSegments(List<StreamSegment> streamSegments) {
+        this.streamSegments = streamSegments;
+    }
+
+    public void setMetaInfo(final List<MetaInfo> metaInfo) {
+        this.metaInfo = metaInfo;
+    }
+
+    public List<Frameset> getPreviewFrames() {
+        return previewFrames;
+    }
+
+    public void setPreviewFrames(final List<Frameset> previewFrames) {
+        this.previewFrames = previewFrames;
+    }
+
+    @Nonnull
+    public List<MetaInfo> getMetaInfo() {
+        return this.metaInfo;
     }
 }

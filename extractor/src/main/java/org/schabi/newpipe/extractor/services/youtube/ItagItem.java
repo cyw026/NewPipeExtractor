@@ -8,7 +8,7 @@ import static org.schabi.newpipe.extractor.services.youtube.ItagItem.ItagType.*;
 
 public class ItagItem {
     /**
-     * List can be found here https://github.com/rg3/youtube-dl/blob/master/youtube_dl/extractor/youtube.py#L360
+     * List can be found here https://github.com/ytdl-org/youtube-dl/blob/9fc5eafb8e384453a49f7cfe73147be491f0b19d/youtube_dl/extractor/youtube.py#L1071
      */
     private static final ItagItem[] ITAG_LIST = {
             /////////////////////////////////////////////////////
@@ -46,13 +46,12 @@ public class ItagItem {
             /// VIDEO ONLY ////////////////////////////////////////////
             //           ID      Type     Format  Resolution  FPS  ///
             /////////////////////////////////////////////////////////
-            // Don't add VideoOnly streams that have normal variants
             new ItagItem(160, VIDEO_ONLY, MPEG_4, "144p"),
             new ItagItem(133, VIDEO_ONLY, MPEG_4, "240p"),
-//          new ItagItem(134, VIDEO_ONLY, MPEG_4, "360p"),
+            new ItagItem(134, VIDEO_ONLY, MPEG_4, "360p"),
             new ItagItem(135, VIDEO_ONLY, MPEG_4, "480p"),
             new ItagItem(212, VIDEO_ONLY, MPEG_4, "480p"),
-//          new ItagItem(136, VIDEO_ONLY, MPEG_4, "720p"),
+            new ItagItem(136, VIDEO_ONLY, MPEG_4, "720p"),
             new ItagItem(298, VIDEO_ONLY, MPEG_4, "720p60", 60),
             new ItagItem(137, VIDEO_ONLY, MPEG_4, "1080p"),
             new ItagItem(299, VIDEO_ONLY, MPEG_4, "1080p60", 60),
@@ -60,7 +59,7 @@ public class ItagItem {
 
             new ItagItem(278, VIDEO_ONLY, WEBM, "144p"),
             new ItagItem(242, VIDEO_ONLY, WEBM, "240p"),
-//          new ItagItem(243, VIDEO_ONLY, WEBM, "360p"),
+            new ItagItem(243, VIDEO_ONLY, WEBM, "360p"),
             new ItagItem(244, VIDEO_ONLY, WEBM, "480p"),
             new ItagItem(245, VIDEO_ONLY, WEBM, "480p"),
             new ItagItem(246, VIDEO_ONLY, WEBM, "480p"),
@@ -75,6 +74,7 @@ public class ItagItem {
             new ItagItem(313, VIDEO_ONLY, WEBM, "2160p"),
             new ItagItem(315, VIDEO_ONLY, WEBM, "2160p60", 60)
     };
+
     /*//////////////////////////////////////////////////////////////////////////
     // Utils
     //////////////////////////////////////////////////////////////////////////*/
@@ -155,4 +155,86 @@ public class ItagItem {
     public String resolutionString;
     public int fps = -1;
 
+    // Fields for Dash
+    private int bitrate;
+    private int width;
+    private int height;
+    private int initStart;
+    private int initEnd;
+    private int indexStart;
+    private int indexEnd;
+    private String quality;
+    private String codec;
+
+    public int getBitrate() {
+        return bitrate;
+    }
+
+    public void setBitrate(int bitrate) {
+        this.bitrate = bitrate;
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public void setWidth(int width) {
+        this.width = width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
+
+    public void setHeight(int height) {
+        this.height = height;
+    }
+
+    public int getInitStart() {
+        return initStart;
+    }
+
+    public void setInitStart(int initStart) {
+        this.initStart = initStart;
+    }
+
+    public int getInitEnd() {
+        return initEnd;
+    }
+
+    public void setInitEnd(int initEnd) {
+        this.initEnd = initEnd;
+    }
+
+    public int getIndexStart() {
+        return indexStart;
+    }
+
+    public void setIndexStart(int indexStart) {
+        this.indexStart = indexStart;
+    }
+
+    public int getIndexEnd() {
+        return indexEnd;
+    }
+
+    public void setIndexEnd(int indexEnd) {
+        this.indexEnd = indexEnd;
+    }
+
+    public String getQuality() {
+        return quality;
+    }
+
+    public void setQuality(String quality) {
+        this.quality = quality;
+    }
+
+    public String getCodec() {
+        return codec;
+    }
+
+    public void setCodec(String codec) {
+        this.codec = codec;
+    }
 }
