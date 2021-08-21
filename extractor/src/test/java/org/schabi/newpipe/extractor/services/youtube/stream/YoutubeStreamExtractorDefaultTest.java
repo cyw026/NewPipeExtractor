@@ -30,7 +30,10 @@ import java.util.Random;
 import javax.annotation.Nullable;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.schabi.newpipe.extractor.ExtractorAsserts.assertIsSecureUrl;
 import static org.schabi.newpipe.extractor.ServiceList.YouTube;
 import static org.schabi.newpipe.extractor.utils.Utils.EMPTY_STRING;
 
@@ -453,7 +456,7 @@ public class YoutubeStreamExtractorDefaultTest {
     }
 
     public static class CCLicensed {
-        private static final String ID = "M4gD1WSo5mA";
+        private static final String ID = "pAgnJDJN4VA";
         private static final String URL = BASE_URL + ID;
         private static StreamExtractor extractor;
 
@@ -466,8 +469,20 @@ public class YoutubeStreamExtractorDefaultTest {
         }
 
         @Test
-        public void testGetLicence() throws ParsingException {
-            assertEquals("Creative Commons Attribution licence (reuse allowed)", extractor.getLicence());
+        public void testAudioStreams() throws Exception {
+            final List<AudioStream> audioStreams = extractor.getAudioStreams();
+            assertNotNull(audioStreams);
+
+            assertFalse(audioStreams.isEmpty());
+
+            for (final AudioStream stream : audioStreams) {
+                assertIsSecureUrl(stream.getUrl());
+
+                final int formatId = stream.getFormatId();
+                // see MediaFormat: video stream formats range from 0x100 to 0x1000
+                assertTrue("format id does not fit an audio stream: " + formatId,
+                        0x100 <= formatId && formatId < 0x1000);
+            }
         }
     }
 }

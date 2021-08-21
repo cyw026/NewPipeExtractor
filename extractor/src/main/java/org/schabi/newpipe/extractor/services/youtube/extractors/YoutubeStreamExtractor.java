@@ -1015,11 +1015,10 @@ public class YoutubeStreamExtractor extends StreamExtractor {
 
             StreamingService streamingService = getService();
             LruCache<String, String> lruCache = streamingService.getLruCache();
-            String functionName = getDeobfuscationFuncName(playerCode);
-            String decryption = lruCache.get(functionName);
+            String decryption = lruCache.get(sts);
             if (decryption == null) {
                 cachedDeobfuscationCode = loadDeobfuscationCode();
-                lruCache.put(functionName, cachedDeobfuscationCode);
+                lruCache.put(sts, cachedDeobfuscationCode);
             } else {
                 cachedDeobfuscationCode = decryption;
             }
