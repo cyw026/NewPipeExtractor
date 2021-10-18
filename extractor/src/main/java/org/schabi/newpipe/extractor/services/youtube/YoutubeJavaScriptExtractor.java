@@ -130,11 +130,10 @@ public class YoutubeJavaScriptExtractor {
     @Nonnull
     private static String downloadJavaScriptCode(final String playerJsUrl)
             throws ParsingException {
-        throw new ParsingException("Could not get player js code from url: " + playerJsUrl);
-//        try {
-//            return NewPipe.getDownloader().get(playerJsUrl, Localization.DEFAULT).responseBody();
-//        } catch (final Exception e) {
-//            throw new ParsingException("Could not get player js code from url: " + playerJsUrl);
-//        }
+        try {
+            return NewPipe.getDownloader().get(playerJsUrl, Localization.DEFAULT).responseBody();
+        } catch (final Exception e) {
+            throw new ParsingException("Could not get player js code from url: " + playerJsUrl);
+        }
     }
 }
