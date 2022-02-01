@@ -1,29 +1,30 @@
 package org.schabi.newpipe.extractor.services.youtube;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.schabi.newpipe.downloader.DownloaderTestImpl;
 import org.schabi.newpipe.extractor.NewPipe;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeCommentsLinkHandlerFactory;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class YoutubeCommentsLinkHandlerFactoryTest {
 
     private static YoutubeCommentsLinkHandlerFactory linkHandler;
 
-    @BeforeClass
+    @BeforeAll
     public static void setUp() {
         NewPipe.init(DownloaderTestImpl.getInstance());
         linkHandler = YoutubeCommentsLinkHandlerFactory.getInstance();
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void getIdWithNullAsUrl() throws ParsingException {
-        linkHandler.fromId(null);
+    @Test
+    public void getIdWithNullAsUrl() {
+        assertThrows(IllegalArgumentException.class, () -> linkHandler.fromId(null));
     }
 
     @Test
@@ -59,6 +60,12 @@ public class YoutubeCommentsLinkHandlerFactoryTest {
         assertEquals("VM_6n762j6M", linkHandler.fromUrl("https://INVIDIO.US/watch?v=VM_6n762j6M").getId());
         assertEquals("VM_6n762j6M", linkHandler.fromUrl("https://invidio.us/VM_6n762j6M").getId());
         assertEquals("VM_6n762j6M", linkHandler.fromUrl("https://invidio.us/VM_6n762j6M&t=20").getId());
+    }
+
+    @Test
+    public void getIdFromY2ube() throws ParsingException {
+        assertEquals("VM_6n762j6M", linkHandler.fromUrl("https://y2u.be/VM_6n762j6M").getId());
+        assertEquals("VM_6n762j6M", linkHandler.fromUrl("https://Y2U.Be/VM_6n762j6M").getId());
     }
 
 }

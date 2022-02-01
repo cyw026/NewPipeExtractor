@@ -302,7 +302,7 @@ public class YoutubeStreamExtractor extends StreamExtractor {
     @Override
     public long getTimeStamp() throws ParsingException {
         final long timestamp =
-                getTimestampSeconds("((#|&|\\?)t=\\d{0,3}h?\\d{0,3}m?\\d{1,3}s?)");
+                getTimestampSeconds("((#|&|\\?)t=\\d*h?\\d*m?\\d+s?)");
 
         if (timestamp == -2) {
             // Regex for timestamp was not found
@@ -339,17 +339,29 @@ public class YoutubeStreamExtractor extends StreamExtractor {
         assertPageFetched();
         String likesString = "";
         try {
-            try {
-                likesString = getVideoPrimaryInfoRenderer().getObject("sentimentBar")
-                        .getObject("sentimentBarRenderer").getString("tooltip").split("/")[0];
-            } catch (final NullPointerException e) {
+            likesString = getVideoPrimaryInfoRenderer()
+                    .getObject("videoActions")
+                    .getObject("menuRenderer")
+                    .getArray("topLevelButtons")
+                    .getObject(0)
+                    .getObject("toggleButtonRenderer")
+                    .getObject("defaultText")
+                    .getObject("accessibility")
+                    .getObject("accessibilityData")
+                    .getString("label");
+
+            if (likesString == null) {
                 // If this kicks in our button has no content and therefore ratings must be disabled
                 if (playerResponse.getObject("videoDetails").getBoolean("allowRatings")) {
-                    throw new ParsingException(
-                            "Ratings are enabled even though the like button is missing", e);
+                    throw new ParsingException("Ratings are enabled even though the like button is missing");
                 }
                 return -1;
             }
+
+            if (likesString.toLowerCase().contains("no likes")) {
+                return 0;
+            }
+
             return Integer.parseInt(Utils.removeNonDigitCharacters(likesString));
         } catch (final NumberFormatException nfe) {
             throw new ParsingException("Could not parse \"" + likesString + "\" as an Integer",
@@ -357,35 +369,6 @@ public class YoutubeStreamExtractor extends StreamExtractor {
         } catch (final Exception e) {
             if (getAgeLimit() == NO_AGE_LIMIT) {
                 throw new ParsingException("Could not get like count", e);
-            }
-            return -1;
-        }
-    }
-
-    @Override
-    public long getDislikeCount() throws ParsingException {
-        assertPageFetched();
-
-        String dislikesString = "";
-        try {
-            try {
-                dislikesString = getVideoPrimaryInfoRenderer().getObject("sentimentBar")
-                        .getObject("sentimentBarRenderer").getString("tooltip").split("/")[1];
-            } catch (final NullPointerException e) {
-                // If this kicks in our button has no content and therefore ratings must be disabled
-                if (playerResponse.getObject("videoDetails").getBoolean("allowRatings")) {
-                    throw new ParsingException(
-                            "Ratings are enabled even though the dislike button is missing", e);
-                }
-                return -1;
-            }
-            return Integer.parseInt(Utils.removeNonDigitCharacters(dislikesString));
-        } catch (final NumberFormatException nfe) {
-            throw new ParsingException("Could not parse \"" + dislikesString + "\" as an Integer",
-                    nfe);
-        } catch (final Exception e) {
-            if (getAgeLimit() == NO_AGE_LIMIT) {
-                throw new ParsingException("Could not get dislike count", e);
             }
             return -1;
         }
@@ -452,24 +435,6 @@ public class YoutubeStreamExtractor extends StreamExtractor {
         }
 
         return fixThumbnailUrl(url);
-    }
-
-    @Nonnull
-    @Override
-    public String getSubChannelUrl() {
-        return "";
-    }
-
-    @Nonnull
-    @Override
-    public String getSubChannelName() {
-        return "";
-    }
-
-    @Nonnull
-    @Override
-    public String getSubChannelAvatarUrl() {
-        return "";
     }
 
     @Nonnull
@@ -1255,12 +1220,6 @@ public class YoutubeStreamExtractor extends StreamExtractor {
 
     @Nonnull
     @Override
-    public String getHost() {
-        return "";
-    }
-
-    @Nonnull
-    @Override
     public Privacy getPrivacy() {
         final boolean isUnlisted = playerResponse.getObject("microformat")
                 .getObject("playerMicroformatRenderer").getBoolean("isUnlisted");
@@ -1298,12 +1257,6 @@ public class YoutubeStreamExtractor extends StreamExtractor {
     public List<String> getTags() {
         return JsonUtils.getStringListFromJsonArray(playerResponse.getObject("videoDetails")
                 .getArray("keywords"));
-    }
-
-    @Nonnull
-    @Override
-    public String getSupportInfo() {
-        return "";
     }
 
     @Nonnull
