@@ -1,11 +1,12 @@
 package org.schabi.newpipe.extractor;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.schabi.newpipe.extractor.NewPipe.getServiceByUrl;
+import static org.schabi.newpipe.extractor.ServiceList.SoundCloud;
 import static org.schabi.newpipe.extractor.ServiceList.YouTube;
 
 public class NewPipeTest {
@@ -18,9 +19,11 @@ public class NewPipeTest {
     public void testAllServicesHaveDifferentId() throws Exception {
         HashSet<Integer> servicesId = new HashSet<>();
         for (StreamingService streamingService : NewPipe.getServices()) {
-            String errorMsg = "There are services with the same id = " + streamingService.getServiceId() + " (current service > " + streamingService.getServiceInfo().getName() + ")";
+            final String errorMsg =
+                    "There are services with the same id = " + streamingService.getServiceId()
+                            + " (current service > " + streamingService.getServiceInfo().getName() + ")";
 
-            assertTrue(errorMsg, servicesId.add(streamingService.getServiceId()));
+            assertTrue(servicesId.add(streamingService.getServiceId()), errorMsg);
         }
     }
 
@@ -39,8 +42,10 @@ public class NewPipeTest {
         assertEquals(getServiceByUrl("https://www.youtube.com/watch?v=_r6CgaFNAGg"), YouTube);
         assertEquals(getServiceByUrl("https://www.youtube.com/channel/UCi2bIyFtz-JdI-ou8kaqsqg"), YouTube);
         assertEquals(getServiceByUrl("https://www.youtube.com/playlist?list=PLRqwX-V7Uu6ZiZxtDDRCi6uhfTH4FilpH"), YouTube);
+        assertEquals(getServiceByUrl("https://www.google.it/url?sa=t&rct=j&q=&esrc=s&cd=&cad=rja&uact=8&url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3DHu80uDzh8RY&source=video"), YouTube);
 
-        assertNotEquals(getServiceByUrl("https://soundcloud.com/pegboardnerds"), YouTube);
+        assertEquals(getServiceByUrl("https://soundcloud.com/pegboardnerds"), SoundCloud);
+        assertEquals(getServiceByUrl("https://www.google.com/url?sa=t&url=https%3A%2F%2Fsoundcloud.com%2Fciaoproduction&rct=j&q=&esrc=s&source=web&cd="), SoundCloud);
     }
 
     @Test

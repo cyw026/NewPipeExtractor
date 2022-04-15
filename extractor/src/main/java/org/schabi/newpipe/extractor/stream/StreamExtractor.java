@@ -20,8 +20,12 @@ package org.schabi.newpipe.extractor.stream;
  * along with NewPipe.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import org.schabi.newpipe.extractor.InfoItem;
+import org.schabi.newpipe.extractor.InfoItemsCollector;
+import org.schabi.newpipe.extractor.InfoItemExtractor;
 import org.schabi.newpipe.extractor.Extractor;
 import org.schabi.newpipe.extractor.MediaFormat;
+import org.schabi.newpipe.extractor.MetaInfo;
 import org.schabi.newpipe.extractor.StreamingService;
 import org.schabi.newpipe.extractor.channel.ChannelExtractor;
 import org.schabi.newpipe.extractor.exceptions.ExtractionException;
@@ -30,13 +34,12 @@ import org.schabi.newpipe.extractor.linkhandler.LinkHandler;
 import org.schabi.newpipe.extractor.localization.DateWrapper;
 import org.schabi.newpipe.extractor.utils.Parser;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 /**
  * Scrapes information from a video/audio streaming service (eg, YouTube).
@@ -60,7 +63,9 @@ public abstract class StreamExtractor extends Extractor {
      * @see #getUploadDate()
      */
     @Nullable
-    public abstract String getTextualUploadDate() throws ParsingException;
+    public String getTextualUploadDate() throws ParsingException {
+        return null;
+    }
 
     /**
      * A more general {@code Calendar} instance set to the date provided by the service.<br>
@@ -74,7 +79,9 @@ public abstract class StreamExtractor extends Extractor {
      * @see #getTextualUploadDate()
      */
     @Nullable
-    public abstract DateWrapper getUploadDate() throws ParsingException;
+    public DateWrapper getUploadDate() throws ParsingException {
+        return null;
+    }
 
     /**
      * This will return the url to the thumbnail of the stream. Try to return the medium resolution here.
@@ -92,7 +99,9 @@ public abstract class StreamExtractor extends Extractor {
      * @throws ParsingException
      */
     @Nonnull
-    public abstract Description getDescription() throws ParsingException;
+    public Description getDescription() throws ParsingException {
+        return Description.emptyDescription;
+    }
 
     /**
      * Get the age limit.
@@ -100,52 +109,64 @@ public abstract class StreamExtractor extends Extractor {
      * @return The age which limits the content or {@value NO_AGE_LIMIT} if there is no limit
      * @throws ParsingException if an error occurs while parsing
      */
-    public abstract int getAgeLimit() throws ParsingException;
+    public int getAgeLimit() throws ParsingException {
+        return NO_AGE_LIMIT;
+    }
 
     /**
      * This should return the length of a video in seconds.
      *
-     * @return The length of the stream in seconds.
+     * @return The length of the stream in seconds or 0 when it has no length (e.g. a livestream).
      * @throws ParsingException
      */
-    public abstract long getLength() throws ParsingException;
+    public long getLength() throws ParsingException {
+        return 0;
+    }
 
     /**
      * If the url you are currently handling contains a time stamp/seek, you can return the
      * position it represents here.
      * If the url has no time stamp simply return zero.
      *
-     * @return the timestamp in seconds
+     * @return the timestamp in seconds or 0 when there is no timestamp
      * @throws ParsingException
      */
-    public abstract long getTimeStamp() throws ParsingException;
+    public long getTimeStamp() throws ParsingException {
+        return 0;
+    }
 
     /**
      * The count of how many people have watched the video/listened to the audio stream.
      * If the current stream has no view count or its not available simply return -1
      *
-     * @return amount of views.
+     * @return amount of views or -1 if not available.
      * @throws ParsingException
      */
-    public abstract long getViewCount() throws ParsingException;
+    public long getViewCount() throws ParsingException {
+        return -1;
+    }
 
     /**
      * The amount of likes a video/audio stream got.
      * If the current stream has no likes or its not available simply return -1
      *
-     * @return the amount of likes the stream got
+     * @return the amount of likes the stream got or -1 if not available.
      * @throws ParsingException
      */
-    public abstract long getLikeCount() throws ParsingException;
+    public long getLikeCount() throws ParsingException {
+        return -1;
+    }
 
     /**
      * The amount of dislikes a video/audio stream got.
      * If the current stream has no dislikes or its not available simply return -1
      *
-     * @return the amount of likes the stream got
+     * @return the amount of likes the stream got or -1 if not available.
      * @throws ParsingException
      */
-    public abstract long getDislikeCount() throws ParsingException;
+    public long getDislikeCount() throws ParsingException {
+        return -1;
+    }
 
     /**
      * The Url to the page of the creator/uploader of the stream. This must not be a homepage,
@@ -154,7 +175,7 @@ public abstract class StreamExtractor extends Extractor {
      * so be sure to implement that one before you return a value here, otherwise NewPipe will crash if one selects
      * this url.
      *
-     * @return the url to the page of the creator/uploader of the stream or an empty String
+     * @return the url to the page of the creator/uploader of the stream or an empty string
      * @throws ParsingException
      */
     @Nonnull
@@ -164,11 +185,22 @@ public abstract class StreamExtractor extends Extractor {
      * The name of the creator/uploader of the stream.
      * If the name is not available you can simply return an empty string.
      *
-     * @return the name of the creator/uploader of the stream or an empty String
+     * @return the name of the creator/uploader of the stream or an empty tring
      * @throws ParsingException
      */
     @Nonnull
     public abstract String getUploaderName() throws ParsingException;
+
+    /**
+     * Whether the uploader has been verified by the service's provider.
+     * If there is no verification implemented, return <code>false</code>.
+     *
+     * @return whether the uploader has been verified by the service's provider
+     * @throws ParsingException
+     */
+    public boolean isUploaderVerified() throws ParsingException {
+        return false;
+    }
 
     /**
      * The url to the image file/profile picture/avatar of the creator/uploader of the stream.
@@ -178,7 +210,9 @@ public abstract class StreamExtractor extends Extractor {
      * @throws ParsingException
      */
     @Nonnull
-    public abstract String getUploaderAvatarUrl() throws ParsingException;
+    public String getUploaderAvatarUrl() throws ParsingException {
+        return "";
+    }
 
     /**
      * The Url to the page of the sub-channel of the stream. This must not be a homepage,
@@ -191,7 +225,9 @@ public abstract class StreamExtractor extends Extractor {
      * @throws ParsingException
      */
     @Nonnull
-    public abstract String getSubChannelUrl() throws ParsingException;
+    public String getSubChannelUrl() throws ParsingException {
+        return "";
+    }
 
     /**
      * The name of the sub-channel of the stream.
@@ -201,7 +237,9 @@ public abstract class StreamExtractor extends Extractor {
      * @throws ParsingException
      */
     @Nonnull
-    public abstract String getSubChannelName() throws ParsingException;
+    public String getSubChannelName() throws ParsingException {
+        return "";
+    }
 
     /**
      * The url to the image file/profile picture/avatar of the sub-channel of the stream.
@@ -211,17 +249,21 @@ public abstract class StreamExtractor extends Extractor {
      * @throws ParsingException
      */
     @Nonnull
-    public abstract String getSubChannelAvatarUrl() throws ParsingException;
+    public String getSubChannelAvatarUrl() throws ParsingException {
+        return "";
+    }
 
     /**
      * Get the dash mpd url. If you don't know what a dash MPD is you can read about it
      * <a href="https://www.brendanlong.com/the-structure-of-an-mpeg-dash-mpd.html">here</a>.
      *
-     * @return the url as a string or an empty string
+     * @return the url as a string or an empty string or an empty string if not available
      * @throws ParsingException if an error occurs while reading
      */
     @Nonnull
-    public abstract String getDashMpdUrl() throws ParsingException;
+    public String getDashMpdUrl() throws ParsingException {
+        return "";
+    }
 
     /**
      * I am not sure if this is in use, and how this is used. However the frontend is missing support
@@ -229,11 +271,13 @@ public abstract class StreamExtractor extends Extractor {
      * <a href="https://github.com/teamnewpipe/newpipe/issues">issue</a>,
      * or fix this description if you know whats up with this.
      *
-     * @return The Url to the hls stream.
+     * @return The Url to the hls stream or an empty string if not available.
      * @throws ParsingException
      */
     @Nonnull
-    public abstract String getHlsUrl() throws ParsingException;
+    public String getHlsUrl() throws ParsingException {
+        return "";
+    }
 
     /**
      * This should return a list of available
@@ -279,20 +323,22 @@ public abstract class StreamExtractor extends Extractor {
     /**
      * This will return a list of available
      * <a href="https://teamnewpipe.github.io/NewPipeExtractor/javadoc/org/schabi/newpipe/extractor/stream/Subtitles.html">Subtitles</a>s.
-     * If no subtitles are available an empty list can returned.
+     * If no subtitles are available an empty list can be returned.
      *
      * @return a list of available subtitles or an empty list
      * @throws IOException
      * @throws ExtractionException
      */
     @Nonnull
-    public abstract List<SubtitlesStream> getSubtitlesDefault() throws IOException, ExtractionException;
+    public List<SubtitlesStream> getSubtitlesDefault() throws IOException, ExtractionException {
+        return Collections.emptyList();
+    }
 
     /**
      * This will return a list of available
      * <a href="https://teamnewpipe.github.io/NewPipeExtractor/javadoc/org/schabi/newpipe/extractor/stream/Subtitles.html">Subtitles</a>s.
      * given by a specific type.
-     * If no subtitles in that specific format are available an empty list can returned.
+     * If no subtitles in that specific format are available an empty list can be returned.
      *
      * @param format the media format by which the subtitles should be filtered
      * @return a list of available subtitles or an empty list
@@ -300,7 +346,9 @@ public abstract class StreamExtractor extends Extractor {
      * @throws ExtractionException
      */
     @Nonnull
-    public abstract List<SubtitlesStream> getSubtitles(MediaFormat format) throws IOException, ExtractionException;
+    public List<SubtitlesStream> getSubtitles(MediaFormat format) throws IOException, ExtractionException {
+        return Collections.emptyList();
+    }
 
     /**
      * Get the <a href="https://teamnewpipe.github.io/NewPipeExtractor/javadoc/">StreamType</a>.
@@ -321,7 +369,27 @@ public abstract class StreamExtractor extends Extractor {
      * @throws IOException
      * @throws ExtractionException
      */
-    public abstract StreamInfoItemsCollector getRelatedStreams() throws IOException, ExtractionException;
+    @Nullable
+    public InfoItemsCollector<? extends InfoItem, ? extends InfoItemExtractor>
+    getRelatedItems() throws IOException, ExtractionException {
+        return null;
+    }
+
+    /**
+     * @deprecated Use {@link #getRelatedItems()}. May be removed in a future version.
+     * @return The result of {@link #getRelatedItems()} if it is a
+     *         StreamInfoItemsCollector, <code>null</code> otherwise
+     * @throws IOException
+     * @throws ExtractionException
+     */
+    @Deprecated
+    @Nullable
+    public StreamInfoItemsCollector getRelatedStreams() throws IOException, ExtractionException {
+        InfoItemsCollector<?, ?> collector = getRelatedItems();
+        if (collector instanceof StreamInfoItemsCollector) {
+            return (StreamInfoItemsCollector) collector;
+        } else return null;
+    }
 
     /**
      * Should return a list of Frameset object that contains preview of stream frames
@@ -337,9 +405,11 @@ public abstract class StreamExtractor extends Extractor {
     /**
      * Should analyse the webpage's document and extracts any error message there might be.
      *
-     * @return Error message; null if there is no error message.
+     * @return Error message; <code>null</code> if there is no error message.
      */
-    public abstract String getErrorMessage();
+    public String getErrorMessage() {
+        return null;
+    }
 
     //////////////////////////////////////////////////////////////////
     ///  Helper
@@ -371,9 +441,9 @@ public abstract class StreamExtractor extends Extractor {
                 String minutesString = "";
                 String hoursString = "";
                 try {
-                    secondsString = Parser.matchGroup1("(\\d{1,3})s", timeStamp);
-                    minutesString = Parser.matchGroup1("(\\d{1,3})m", timeStamp);
-                    hoursString = Parser.matchGroup1("(\\d{1,3})h", timeStamp);
+                    secondsString = Parser.matchGroup1("(\\d+)s", timeStamp);
+                    minutesString = Parser.matchGroup1("(\\d+)m", timeStamp);
+                    hoursString = Parser.matchGroup1("(\\d+)h", timeStamp);
                 } catch (Exception e) {
                     //it could be that time is given in another method
                     if (secondsString.isEmpty() //if nothing was got,
@@ -405,31 +475,35 @@ public abstract class StreamExtractor extends Extractor {
      * a federated system, but a centralised system,
      * you can simply return an empty string.
      *
-     * @return the host of the stream or an empty String.
+     * @return the host of the stream or an empty string.
      * @throws ParsingException
      */
     @Nonnull
-    public abstract String getHost() throws ParsingException;
+    public String getHost() throws ParsingException {
+        return "";
+    }
 
     /**
      * The privacy of the stream (Eg. Public, Private, Unlisted…).
-     * If the privacy is not available you can simply return an empty string.
      *
-     * @return the privacy of the stream or an empty String.
+     * @return the privacy of the stream.
      * @throws ParsingException
      */
-    @Nonnull
-    public abstract String getPrivacy() throws ParsingException;
+    public Privacy getPrivacy() throws ParsingException {
+        return Privacy.PUBLIC;
+    }
 
     /**
      * The name of the category of the stream.
      * If the category is not available you can simply return an empty string.
      *
-     * @return the category of the stream or an empty String.
+     * @return the category of the stream or an empty string.
      * @throws ParsingException
      */
     @Nonnull
-    public abstract String getCategory() throws ParsingException;
+    public String getCategory() throws ParsingException {
+        return "";
+    }
 
     /**
      * The name of the licence of the stream.
@@ -439,7 +513,9 @@ public abstract class StreamExtractor extends Extractor {
      * @throws ParsingException
      */
     @Nonnull
-    public abstract String getLicence() throws ParsingException;
+    public String getLicence() throws ParsingException {
+        return "";
+    }
 
     /**
      * The locale language of the stream.
@@ -447,21 +523,25 @@ public abstract class StreamExtractor extends Extractor {
      * If the language is provided by a language code, you can return
      * new Locale(language_code);
      *
-     * @return the locale language of the stream or null.
+     * @return the locale language of the stream or <code>null</code>.
      * @throws ParsingException
      */
     @Nullable
-    public abstract Locale getLanguageInfo() throws ParsingException;
+    public Locale getLanguageInfo() throws ParsingException {
+        return null;
+    }
 
     /**
      * The list of tags of the stream.
      * If the tag list is not available you can simply return an empty list.
      *
-     * @return the list of tags of the stream or an empty list.
+     * @return the list of tags of the stream or Collections.emptyList().
      * @throws ParsingException
      */
     @Nonnull
-    public abstract List<String> getTags() throws ParsingException;
+    public List<String> getTags() throws ParsingException {
+        return Collections.emptyList();
+    }
 
     /**
      * The support information of the stream.
@@ -470,9 +550,48 @@ public abstract class StreamExtractor extends Extractor {
      * If the support information are not available,
      * you can simply return an empty String.
      *
-     * @return the support information of the stream or an empty String.
+     * @return the support information of the stream or an empty string.
      * @throws ParsingException
      */
     @Nonnull
-    public abstract String getSupportInfo() throws ParsingException;
+    public String getSupportInfo() throws ParsingException {
+        return "";
+    }
+
+    /**
+     * The list of stream segments by timestamps for the stream.
+     * If the segment list is not available you can simply return an empty list.
+     *
+     * @return The list of segments of the stream or an empty list.
+     * @throws ParsingException
+     */
+    @Nonnull
+    public List<StreamSegment> getStreamSegments() throws ParsingException {
+        return Collections.emptyList();
+    }
+
+    /**
+     * Meta information about the stream.
+     * <p>
+     * This can be information about the stream creator (e.g. if the creator is a public broadcaster)
+     * or further information on the topic (e.g. hints that the video might contain conspiracy theories
+     * or contains information about a current health situation like the Covid-19 pandemic).
+     * </p>
+     * The meta information often contains links to external sources like Wikipedia or the WHO.
+     *
+     * @return The meta info of the stream or an empty list if not provided.
+     * @throws ParsingException
+     */
+    @Nonnull
+    public List<MetaInfo> getMetaInfo() throws ParsingException {
+        return Collections.emptyList();
+    }
+
+    public enum Privacy {
+        PUBLIC,
+        UNLISTED,
+        PRIVATE,
+        INTERNAL,
+        OTHER
+    }
 }

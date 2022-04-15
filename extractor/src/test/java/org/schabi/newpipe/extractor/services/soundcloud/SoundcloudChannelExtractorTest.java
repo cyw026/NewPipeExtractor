@@ -1,15 +1,15 @@
 package org.schabi.newpipe.extractor.services.soundcloud;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.schabi.newpipe.DownloaderTestImpl;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.schabi.newpipe.downloader.DownloaderTestImpl;
 import org.schabi.newpipe.extractor.NewPipe;
 import org.schabi.newpipe.extractor.channel.ChannelExtractor;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.services.BaseChannelExtractorTest;
 import org.schabi.newpipe.extractor.services.soundcloud.extractors.SoundcloudChannelExtractor;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.schabi.newpipe.extractor.ExtractorAsserts.assertEmpty;
 import static org.schabi.newpipe.extractor.ExtractorAsserts.assertIsSecureUrl;
 import static org.schabi.newpipe.extractor.ServiceList.SoundCloud;
@@ -22,7 +22,7 @@ public class SoundcloudChannelExtractorTest {
     public static class LilUzi implements BaseChannelExtractorTest {
         private static SoundcloudChannelExtractor extractor;
 
-        @BeforeClass
+        @BeforeAll
         public static void setUp() throws Exception {
             NewPipe.init(DownloaderTestImpl.getInstance());
             extractor = (SoundcloudChannelExtractor) SoundCloud
@@ -41,7 +41,7 @@ public class SoundcloudChannelExtractorTest {
 
         @Test
         public void testName() {
-            assertEquals("LIL UZI VERT", extractor.getName());
+            assertEquals("Lil Uzi Vert", extractor.getName());
         }
 
         @Test
@@ -99,14 +99,19 @@ public class SoundcloudChannelExtractorTest {
 
         @Test
         public void testSubscriberCount() {
-            assertTrue("Wrong subscriber count", extractor.getSubscriberCount() >= 1e6);
+            assertTrue(extractor.getSubscriberCount() >= 1e6, "Wrong subscriber count");
+        }
+
+        @Override
+        public void testVerified() throws Exception {
+            assertTrue(extractor.isVerified());
         }
     }
 
     public static class DubMatix implements BaseChannelExtractorTest {
         private static SoundcloudChannelExtractor extractor;
 
-        @BeforeClass
+        @BeforeAll
         public static void setUp() throws Exception {
             NewPipe.init(DownloaderTestImpl.getInstance());
             extractor = (SoundcloudChannelExtractor) SoundCloud
@@ -193,7 +198,12 @@ public class SoundcloudChannelExtractorTest {
 
         @Test
         public void testSubscriberCount() {
-            assertTrue("Wrong subscriber count", extractor.getSubscriberCount() >= 2e6);
+            assertTrue(extractor.getSubscriberCount() >= 2e6, "Wrong subscriber count");
+        }
+
+        @Override
+        public void testVerified() throws Exception {
+            assertTrue(extractor.isVerified());
         }
     }
 }

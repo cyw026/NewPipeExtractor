@@ -32,12 +32,16 @@ public class StreamInfoItem extends InfoItem {
     private final StreamType streamType;
 
     private String uploaderName;
+    private String shortDescription;
     private String textualUploadDate;
-    @Nullable private DateWrapper uploadDate;
+    @Nullable
+    private DateWrapper uploadDate;
     private long viewCount = -1;
     private long duration = -1;
 
     private String uploaderUrl = null;
+    private String uploaderAvatarUrl = null;
+    private boolean uploaderVerified = false;
 
     public StreamInfoItem(int serviceId, String url, String name, StreamType streamType) {
         super(InfoType.STREAM, serviceId, url, name);
@@ -81,6 +85,23 @@ public class StreamInfoItem extends InfoItem {
     }
 
     @Nullable
+    public String getUploaderAvatarUrl() {
+        return uploaderAvatarUrl;
+    }
+
+    public void setUploaderAvatarUrl(final String uploaderAvatarUrl) {
+        this.uploaderAvatarUrl = uploaderAvatarUrl;
+    }
+
+    public String getShortDescription() {
+        return shortDescription;
+    }
+
+    public void setShortDescription(final String shortDescription) {
+        this.shortDescription = shortDescription;
+    }
+
+    @Nullable
     public String getTextualUploadDate() {
         return textualUploadDate;
     }
@@ -98,6 +119,14 @@ public class StreamInfoItem extends InfoItem {
         this.uploadDate = uploadDate;
     }
 
+    public boolean isUploaderVerified() {
+        return uploaderVerified;
+    }
+
+    public void setUploaderVerified(boolean uploaderVerified) {
+        this.uploaderVerified = uploaderVerified;
+    }
+
     @Override
     public String toString() {
         return "StreamInfoItem{" +
@@ -112,6 +141,7 @@ public class StreamInfoItem extends InfoItem {
                 ", url='" + getUrl() + '\'' +
                 ", name='" + getName() + '\'' +
                 ", thumbnailUrl='" + getThumbnailUrl() + '\'' +
+                ", uploaderVerified='" + isUploaderVerified() + '\'' +
                 '}';
     }
 }

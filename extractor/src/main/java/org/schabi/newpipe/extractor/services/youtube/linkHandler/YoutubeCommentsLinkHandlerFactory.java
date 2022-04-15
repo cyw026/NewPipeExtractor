@@ -1,10 +1,7 @@
 package org.schabi.newpipe.extractor.services.youtube.linkHandler;
 
-import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.BASE_YOUTUBE_INTENT_URL;
-
 import org.schabi.newpipe.extractor.exceptions.FoundAdException;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
-import org.schabi.newpipe.extractor.linkhandler.ListLinkHandler;
 import org.schabi.newpipe.extractor.linkhandler.ListLinkHandlerFactory;
 
 import java.util.List;
@@ -18,17 +15,8 @@ public class YoutubeCommentsLinkHandlerFactory extends ListLinkHandlerFactory {
     }
 
     @Override
-    public ListLinkHandler fromUrl(String url) throws ParsingException {
-        if (url.startsWith(BASE_YOUTUBE_INTENT_URL)){
-            return super.fromUrl(url, BASE_YOUTUBE_INTENT_URL);
-        } else {
-            return super.fromUrl(url);
-        }
-    }
-
-    @Override
     public String getUrl(String id) {
-        return "https://m.youtube.com/watch?v=" + id;
+        return "https://www.youtube.com/watch?v=" + id;
     }
 
     @Override

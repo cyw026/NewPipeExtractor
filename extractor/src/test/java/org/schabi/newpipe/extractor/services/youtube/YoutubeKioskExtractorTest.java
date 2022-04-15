@@ -1,25 +1,32 @@
 package org.schabi.newpipe.extractor.services.youtube;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.schabi.newpipe.DownloaderTestImpl;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.schabi.newpipe.downloader.DownloaderFactory;
 import org.schabi.newpipe.extractor.NewPipe;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.services.BaseListExtractorTest;
 import org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeTrendingExtractor;
 
-import static org.junit.Assert.assertEquals;
+import java.util.Random;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.schabi.newpipe.extractor.ServiceList.YouTube;
 import static org.schabi.newpipe.extractor.services.DefaultTests.assertNoMoreItems;
 import static org.schabi.newpipe.extractor.services.DefaultTests.defaultTestRelatedItems;
 
 public class YoutubeKioskExtractorTest {
+
+    private static final String RESOURCE_PATH = DownloaderFactory.RESOURCE_PATH + "services/youtube/extractor/kiosk/";
+    
     public static class Trending implements BaseListExtractorTest {
         private static YoutubeTrendingExtractor extractor;
 
-        @BeforeClass
+        @BeforeAll
         public static void setUp() throws Exception {
-            NewPipe.init(DownloaderTestImpl.getInstance());
+            YoutubeParsingHelper.resetClientVersionAndKey();
+            YoutubeParsingHelper.setNumberGenerator(new Random(1));
+            NewPipe.init(new DownloaderFactory().getDownloader(RESOURCE_PATH + "trending"));
             extractor = (YoutubeTrendingExtractor) YouTube.getKioskList().getDefaultKioskExtractor();
             extractor.fetchPage();
         }

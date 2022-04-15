@@ -1,33 +1,38 @@
 package org.schabi.newpipe.extractor.services.youtube;
 
-import org.junit.Ignore;
-import org.junit.Test;
-import org.schabi.newpipe.DownloaderTestImpl;
+import org.junit.jupiter.api.Test;
+import org.schabi.newpipe.downloader.DownloaderFactory;
 import org.schabi.newpipe.extractor.ListExtractor;
 import org.schabi.newpipe.extractor.NewPipe;
 import org.schabi.newpipe.extractor.channel.ChannelExtractor;
-import org.schabi.newpipe.extractor.localization.Localization;
 import org.schabi.newpipe.extractor.localization.DateWrapper;
+import org.schabi.newpipe.extractor.localization.Localization;
 import org.schabi.newpipe.extractor.stream.StreamInfoItem;
 
-import java.text.SimpleDateFormat;
-import java.util.*;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.schabi.newpipe.extractor.ServiceList.YouTube;
 import static org.schabi.newpipe.extractor.services.DefaultTests.defaultTestRelatedItems;
 
 /**
  * A class that tests multiple channels and ranges of "time ago".
  */
-@Ignore("Should be ran manually from time to time, as it's too time consuming.")
 public class YoutubeChannelLocalizationTest {
-    private static final boolean DEBUG = true;
-    private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+    private static final String RESOURCE_PATH = DownloaderFactory.RESOURCE_PATH + "services/youtube/extractor/channel/";
+    private static final boolean DEBUG = false;
+    private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     @Test
     public void testAllSupportedLocalizations() throws Exception {
-        NewPipe.init(DownloaderTestImpl.getInstance());
+        YoutubeParsingHelper.resetClientVersionAndKey();
+        YoutubeParsingHelper.setNumberGenerator(new Random(1));
+        NewPipe.init(new DownloaderFactory().getDownloader(RESOURCE_PATH + "localization"));
 
         testLocalizationsFor("https://www.youtube.com/user/NBCNews");
         testLocalizationsFor("https://www.youtube.com/channel/UCcmpeVbSSQlZRvHfdC-CRwg/videos");
@@ -35,10 +40,10 @@ public class YoutubeChannelLocalizationTest {
         testLocalizationsFor("https://www.youtube.com/channel/UCEOXxzW2vU0P-0THehuIIeg");
     }
 
-    private void testLocalizationsFor(String channelUrl) throws Exception {
+    private void testLocalizationsFor(final String channelUrl) throws Exception {
 
         final List<Localization> supportedLocalizations = YouTube.getSupportedLocalizations();
-//        final List<Localization> supportedLocalizations = Arrays.asList(Localization.DEFAULT, new Localization("sr"));
+        // final List<Localization> supportedLocalizations = Arrays.asList(Localization.DEFAULT, new Localization("sr"));
         final Map<Localization, List<StreamInfoItem>> results = new LinkedHashMap<>();
 
         for (Localization currentLocalization : supportedLocalizations) {
@@ -50,7 +55,7 @@ public class YoutubeChannelLocalizationTest {
                 extractor.forceLocalization(currentLocalization);
                 extractor.fetchPage();
                 itemsPage = defaultTestRelatedItems(extractor);
-            } catch (Throwable e) {
+            } catch (final Throwable e) {
                 System.out.println("[!] " + currentLocalization + " → failed");
                 throw e;
             }
@@ -64,7 +69,7 @@ public class YoutubeChannelLocalizationTest {
                         + "\n:::: " + item.getStreamType() + ", views = " + item.getViewCount();
                 final DateWrapper uploadDate = item.getUploadDate();
                 if (uploadDate != null) {
-                    String dateAsText = dateFormat.format(uploadDate.date().getTime());
+                    String dateAsText = dateTimeFormatter.format(uploadDate.offsetDateTime());
                     debugMessage += "\n:::: " + item.getTextualUploadDate() +
                             "\n:::: " + dateAsText;
                 }
@@ -107,13 +112,13 @@ public class YoutubeChannelLocalizationTest {
                 final DateWrapper currentUploadDate = currentItem.getUploadDate();
 
                 final String referenceDateString = referenceUploadDate == null ? "null" :
-                        dateFormat.format(referenceUploadDate.date().getTime());
+                        dateTimeFormatter.format(referenceUploadDate.offsetDateTime());
                 final String currentDateString = currentUploadDate == null ? "null" :
-                        dateFormat.format(currentUploadDate.date().getTime());
+                        dateTimeFormatter.format(currentUploadDate.offsetDateTime());
 
                 long difference = -1;
                 if (referenceUploadDate != null && currentUploadDate != null) {
-                    difference = Math.abs(referenceUploadDate.date().getTimeInMillis() - currentUploadDate.date().getTimeInMillis());
+                    difference = ChronoUnit.MILLIS.between(referenceUploadDate.offsetDateTime(), currentUploadDate.offsetDateTime());
                 }
 
                 final boolean areTimeEquals = difference < 5 * 60 * 1000L;

@@ -7,14 +7,16 @@ import org.schabi.newpipe.extractor.services.soundcloud.SoundcloudParsingHelper;
 import org.schabi.newpipe.extractor.stream.StreamInfoItemExtractor;
 import org.schabi.newpipe.extractor.stream.StreamType;
 
-import static org.schabi.newpipe.extractor.utils.JsonUtils.EMPTY_STRING;
+import javax.annotation.Nullable;
+
+import static org.schabi.newpipe.extractor.utils.Utils.EMPTY_STRING;
 import static org.schabi.newpipe.extractor.utils.Utils.replaceHttpWithHttps;
 
 public class SoundcloudStreamInfoItemExtractor implements StreamInfoItemExtractor {
 
     protected final JsonObject itemObject;
 
-    public SoundcloudStreamInfoItemExtractor(JsonObject itemObject) {
+    public SoundcloudStreamInfoItemExtractor(final JsonObject itemObject) {
         this.itemObject = itemObject;
     }
 
@@ -43,6 +45,17 @@ public class SoundcloudStreamInfoItemExtractor implements StreamInfoItemExtracto
         return replaceHttpWithHttps(itemObject.getObject("user").getString("permalink_url"));
     }
 
+    @Nullable
+    @Override
+    public String getUploaderAvatarUrl() {
+        return null;
+    }
+
+    @Override
+    public boolean isUploaderVerified() throws ParsingException {
+        return itemObject.getObject("user").getBoolean("verified");
+    }
+
     @Override
     public String getTextualUploadDate() {
         return itemObject.getString("created_at");
@@ -64,8 +77,7 @@ public class SoundcloudStreamInfoItemExtractor implements StreamInfoItemExtracto
         if (artworkUrl.isEmpty()) {
             artworkUrl = itemObject.getObject("user").getString("avatar_url");
         }
-        String artworkUrlBetterResolution = artworkUrl.replace("large.jpg", "crop.jpg");
-        return artworkUrlBetterResolution;
+        return artworkUrl.replace("large.jpg", "crop.jpg");
     }
 
     @Override

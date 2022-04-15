@@ -2,21 +2,20 @@ package org.schabi.newpipe.extractor.services.peertube;
 
 import com.grack.nanojson.JsonArray;
 import com.grack.nanojson.JsonObject;
-
 import org.schabi.newpipe.extractor.InfoItemsCollector;
 import org.schabi.newpipe.extractor.Page;
 import org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
+import org.schabi.newpipe.extractor.services.peertube.extractors.PeertubeSepiaStreamInfoItemExtractor;
 import org.schabi.newpipe.extractor.services.peertube.extractors.PeertubeStreamInfoItemExtractor;
 import org.schabi.newpipe.extractor.utils.JsonUtils;
 import org.schabi.newpipe.extractor.utils.Parser;
 import org.schabi.newpipe.extractor.utils.Utils;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.TimeZone;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeParseException;
 
 public class PeertubeParsingHelper {
     public static final String START_KEY = "start";
@@ -34,19 +33,12 @@ public class PeertubeParsingHelper {
         }
     }
 
-    public static Calendar parseDateFrom(final String textualUploadDate) throws ParsingException {
-        final Date date;
+    public static OffsetDateTime parseDateFrom(final String textualUploadDate) throws ParsingException {
         try {
-            final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.S'Z'");
-            sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
-            date = sdf.parse(textualUploadDate);
-        } catch (ParseException e) {
+            return OffsetDateTime.ofInstant(Instant.parse(textualUploadDate), ZoneOffset.UTC);
+        } catch (DateTimeParseException e) {
             throw new ParsingException("Could not parse date: \"" + textualUploadDate + "\"", e);
         }
-
-        final Calendar uploadDate = Calendar.getInstance();
-        uploadDate.setTime(date);
-        return uploadDate;
     }
 
     public static Page getNextPage(final String prevPageUrl, final long total) {
@@ -72,6 +64,19 @@ public class PeertubeParsingHelper {
     }
 
     public static void collectStreamsFrom(final InfoItemsCollector collector, final JsonObject json, final String baseUrl) throws ParsingException {
+        collectStreamsFrom(collector, json, baseUrl, false);
+    }
+
+    /**
+     * Collect stream from json with collector
+     *
+     * @param collector the collector used to collect information
+     * @param json      the file to retrieve data from
+     * @param baseUrl   the base Url of the instance
+     * @param sepia     if we should use PeertubeSepiaStreamInfoItemExtractor
+     * @throws ParsingException
+     */
+    public static void collectStreamsFrom(final InfoItemsCollector collector, final JsonObject json, final String baseUrl, boolean sepia) throws ParsingException {
         final JsonArray contents;
         try {
             contents = (JsonArray) JsonUtils.getValue(json, "data");
@@ -81,10 +86,22 @@ public class PeertubeParsingHelper {
 
         for (final Object c : contents) {
             if (c instanceof JsonObject) {
-                final JsonObject item = (JsonObject) c;
-                final PeertubeStreamInfoItemExtractor extractor = new PeertubeStreamInfoItemExtractor(item, baseUrl);
+                JsonObject item = (JsonObject) c;
+
+                // PeerTube playlists have the stream info encapsulated in an "video" object
+                if (item.has("video")) {
+                    item = item.getObject("video");
+                }
+
+                PeertubeStreamInfoItemExtractor extractor;
+                if (sepia) {
+                    extractor = new PeertubeSepiaStreamInfoItemExtractor(item, baseUrl);
+                } else {
+                    extractor = new PeertubeStreamInfoItemExtractor(item, baseUrl);
+                }
                 collector.commit(extractor);
             }
         }
     }
+
 }

@@ -5,6 +5,8 @@ import org.schabi.newpipe.extractor.InfoItemsCollector;
 import org.schabi.newpipe.extractor.exceptions.FoundAdException;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Vector;
 
@@ -32,6 +34,10 @@ public class StreamInfoItemsCollector extends InfoItemsCollector<StreamInfoItem,
 
     public StreamInfoItemsCollector(int serviceId) {
         super(serviceId);
+    }
+
+    public StreamInfoItemsCollector(int serviceId, Comparator<StreamInfoItem> comparator) {
+        super(serviceId, comparator);
     }
 
     @Override
@@ -85,6 +91,22 @@ public class StreamInfoItemsCollector extends InfoItemsCollector<StreamInfoItem,
         } catch (Exception e) {
             addError(e);
         }
+        try {
+            resultItem.setUploaderAvatarUrl(extractor.getUploaderAvatarUrl());
+        } catch (Exception e) {
+            addError(e);
+        }
+        try {
+            resultItem.setUploaderVerified(extractor.isUploaderVerified());
+        } catch (Exception e) {
+            addError(e);
+        }
+        try {
+            resultItem.setShortDescription(extractor.getShortDescription());
+        } catch (Exception e) {
+            addError(e);
+        }
+
         return resultItem;
     }
 
@@ -100,7 +122,7 @@ public class StreamInfoItemsCollector extends InfoItemsCollector<StreamInfoItem,
     }
 
     public List<StreamInfoItem> getStreamInfoItemList() {
-        List<StreamInfoItem> siiList = new Vector<>();
+        List<StreamInfoItem> siiList = new ArrayList<>();
         for (InfoItem ii : super.getItems()) {
             if (ii instanceof StreamInfoItem) {
                 siiList.add((StreamInfoItem) ii);

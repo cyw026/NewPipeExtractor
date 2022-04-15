@@ -4,8 +4,8 @@ import org.schabi.newpipe.extractor.InfoItem;
 import org.schabi.newpipe.extractor.InfoItemsCollector;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Vector;
 
 public class CommentsInfoItemsCollector extends InfoItemsCollector<CommentsInfoItem, CommentsInfoItemExtractor> {
 
@@ -65,7 +65,36 @@ public class CommentsInfoItemsCollector extends InfoItemsCollector<CommentsInfoI
             addError(e);
         }
         try {
+            resultItem.setTextualLikeCount(extractor.getTextualLikeCount());
+        } catch (Exception e) {
+            addError(e);
+        }
+        try {
             resultItem.setThumbnailUrl(extractor.getThumbnailUrl());
+        } catch (Exception e) {
+            addError(e);
+        }
+
+        try {
+            resultItem.setHeartedByUploader(extractor.isHeartedByUploader());
+        } catch (Exception e) {
+            addError(e);
+        }
+
+        try {
+            resultItem.setPinned(extractor.isPinned());
+        } catch (Exception e) {
+            addError(e);
+        }
+
+        try {
+            resultItem.setStreamPosition(extractor.getStreamPosition());
+        } catch (Exception e) {
+            addError(e);
+        }
+
+        try {
+            resultItem.setReplies(extractor.getReplies());
         } catch (Exception e) {
             addError(e);
         }
@@ -83,12 +112,6 @@ public class CommentsInfoItemsCollector extends InfoItemsCollector<CommentsInfoI
     }
 
     public List<CommentsInfoItem> getCommentsInfoItemList() {
-        List<CommentsInfoItem> siiList = new Vector<>();
-        for (InfoItem ii : super.getItems()) {
-            if (ii instanceof CommentsInfoItem) {
-                siiList.add((CommentsInfoItem) ii);
-            }
-        }
-        return siiList;
+        return new ArrayList<>(super.getItems());
     }
 }

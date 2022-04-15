@@ -9,8 +9,14 @@ import org.schabi.newpipe.extractor.utils.Parser;
 public class PeertubeStreamLinkHandlerFactory extends LinkHandlerFactory {
 
     private static final PeertubeStreamLinkHandlerFactory instance = new PeertubeStreamLinkHandlerFactory();
-    private static final String ID_PATTERN = "/videos/(watch/|embed/)?([^/?&#]*)";
-    private static final String VIDEO_ENDPOINT = "/api/v1/videos/";
+    private static final String ID_PATTERN = "(/w/|(/videos/(watch/|embed/)?))(?!p/)([^/?&#]*)";
+    // we exclude p/ because /w/p/ is playlist, not video
+    public static final String VIDEO_API_ENDPOINT = "/api/v1/videos/";
+
+    // From PeerTube 3.3.0, the default path is /w/.
+    // We still use /videos/watch/ for compatibility reasons:
+    // /videos/watch/ is still accepted by >=3.3.0 but /w/ isn't by <3.3.0
+    private static final String VIDEO_PATH = "/videos/watch/";
 
     private PeertubeStreamLinkHandlerFactory() {
     }
@@ -21,18 +27,17 @@ public class PeertubeStreamLinkHandlerFactory extends LinkHandlerFactory {
 
     @Override
     public String getUrl(String id) {
-        String baseUrl = ServiceList.PeerTube.getBaseUrl();
-        return getUrl(id, baseUrl);
+        return getUrl(id, ServiceList.PeerTube.getBaseUrl());
     }
 
     @Override
     public String getUrl(String id, String baseUrl) {
-        return baseUrl + VIDEO_ENDPOINT + id;
+        return baseUrl + VIDEO_PATH + id;
     }
 
     @Override
     public String getId(String url) throws ParsingException, IllegalArgumentException {
-        return Parser.matchGroup(ID_PATTERN, url, 2);
+        return Parser.matchGroup(ID_PATTERN, url, 4);
     }
 
     @Override

@@ -1,13 +1,15 @@
 package org.schabi.newpipe.extractor.services.peertube;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.schabi.newpipe.DownloaderTestImpl;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.schabi.newpipe.downloader.DownloaderTestImpl;
+import org.schabi.newpipe.extractor.ExtractorAsserts;
 import org.schabi.newpipe.extractor.NewPipe;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.services.peertube.extractors.PeertubePlaylistExtractor;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.schabi.newpipe.extractor.ServiceList.PeerTube;
 
 public class PeertubePlaylistExtractorTest {
@@ -15,7 +17,7 @@ public class PeertubePlaylistExtractorTest {
     public static class Shocking {
         private static PeertubePlaylistExtractor extractor;
 
-        @BeforeClass
+        @BeforeAll
         public static void setUp() throws Exception {
             NewPipe.init(DownloaderTestImpl.getInstance());
             extractor = (PeertubePlaylistExtractor) PeerTube
@@ -29,6 +31,7 @@ public class PeertubePlaylistExtractorTest {
         }
 
         @Test
+        @Disabled("URL changes with every request")
         public void testGetThumbnailUrl() throws ParsingException {
             assertEquals("https://framatube.org/static/thumbnails/playlist-96b0ee2b-a5a7-4794-8769-58d8ccb79ab7.jpg", extractor.getThumbnailUrl());
         }
@@ -50,7 +53,7 @@ public class PeertubePlaylistExtractorTest {
 
         @Test
         public void testGetStreamCount() throws ParsingException {
-            assertEquals(35, extractor.getStreamCount());
+            ExtractorAsserts.assertGreaterOrEqual(39, extractor.getStreamCount());
         }
 
         @Test

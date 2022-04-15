@@ -6,15 +6,14 @@ import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.localization.DateWrapper;
 import org.schabi.newpipe.extractor.services.soundcloud.SoundcloudParsingHelper;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
-import javax.annotation.Nullable;
-
 public class SoundcloudCommentsInfoItemExtractor implements CommentsInfoItemExtractor {
-    private JsonObject json;
-    private String url;
+    private final JsonObject json;
+    private final String url;
 
-    public SoundcloudCommentsInfoItemExtractor(JsonObject json, String url) {
+    public SoundcloudCommentsInfoItemExtractor(final JsonObject json, final String url) {
         this.json = json;
         this.url = url;
     }
@@ -40,6 +39,16 @@ public class SoundcloudCommentsInfoItemExtractor implements CommentsInfoItemExtr
     }
 
     @Override
+    public boolean isUploaderVerified() throws ParsingException {
+        return json.getObject("user").getBoolean("verified");
+    }
+
+    @Override
+    public int getStreamPosition() throws ParsingException {
+        return json.getInt("timestamp") / 1000; // convert milliseconds to seconds
+    }
+
+    @Override
     public String getUploaderUrl() {
         return json.getObject("user").getString("permalink_url");
     }
@@ -56,17 +65,12 @@ public class SoundcloudCommentsInfoItemExtractor implements CommentsInfoItemExtr
     }
 
     @Override
-    public int getLikeCount() {
-        return -1;
-    }
-
-    @Override
     public String getName() throws ParsingException {
         return json.getObject("user").getString("permalink");
     }
 
     @Override
-    public String getUrl() throws ParsingException {
+    public String getUrl() {
         return url;
     }
 

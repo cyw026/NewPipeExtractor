@@ -4,29 +4,27 @@ import com.grack.nanojson.JsonArray;
 import com.grack.nanojson.JsonObject;
 import com.grack.nanojson.JsonParser;
 import com.grack.nanojson.JsonParserException;
-
 import org.schabi.newpipe.extractor.MediaFormat;
+import org.schabi.newpipe.extractor.MetaInfo;
 import org.schabi.newpipe.extractor.StreamingService;
 import org.schabi.newpipe.extractor.downloader.Downloader;
 import org.schabi.newpipe.extractor.exceptions.ExtractionException;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.linkhandler.LinkHandler;
 import org.schabi.newpipe.extractor.localization.DateWrapper;
-import org.schabi.newpipe.extractor.stream.AudioStream;
-import org.schabi.newpipe.extractor.stream.Description;
-import org.schabi.newpipe.extractor.stream.StreamExtractor;
-import org.schabi.newpipe.extractor.stream.StreamInfoItemsCollector;
-import org.schabi.newpipe.extractor.stream.StreamType;
-import org.schabi.newpipe.extractor.stream.SubtitlesStream;
-import org.schabi.newpipe.extractor.stream.VideoStream;
+import org.schabi.newpipe.extractor.localization.Localization;
+import org.schabi.newpipe.extractor.services.media_ccc.linkHandler.MediaCCCConferenceLinkHandlerFactory;
+import org.schabi.newpipe.extractor.services.media_ccc.linkHandler.MediaCCCStreamLinkHandlerFactory;
+import org.schabi.newpipe.extractor.stream.*;
+import org.schabi.newpipe.extractor.utils.JsonUtils;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
-
-import javax.annotation.Nonnull;
 
 public class MediaCCCStreamExtractor extends StreamExtractor {
     private JsonObject data;
@@ -61,18 +59,8 @@ public class MediaCCCStreamExtractor extends StreamExtractor {
     }
 
     @Override
-    public int getAgeLimit() {
-        return 0;
-    }
-
-    @Override
     public long getLength() {
         return data.getInt("length");
-    }
-
-    @Override
-    public long getTimeStamp() {
-        return 0;
     }
 
     @Override
@@ -80,20 +68,10 @@ public class MediaCCCStreamExtractor extends StreamExtractor {
         return data.getInt("view_count");
     }
 
-    @Override
-    public long getLikeCount() {
-        return -1;
-    }
-
-    @Override
-    public long getDislikeCount() {
-        return -1;
-    }
-
     @Nonnull
     @Override
     public String getUploaderUrl() {
-        return data.getString("conference_url");
+        return MediaCCCConferenceLinkHandlerFactory.CONFERENCE_PATH + getUploaderName();
     }
 
     @Nonnull
@@ -107,36 +85,6 @@ public class MediaCCCStreamExtractor extends StreamExtractor {
     @Override
     public String getUploaderAvatarUrl() {
         return conferenceData.getString("logo_url");
-    }
-
-    @Nonnull
-    @Override
-    public String getSubChannelUrl() throws ParsingException {
-        return "";
-    }
-
-    @Nonnull
-    @Override
-    public String getSubChannelName() throws ParsingException {
-        return "";
-    }
-
-    @Nonnull
-    @Override
-    public String getSubChannelAvatarUrl() throws ParsingException {
-        return "";
-    }
-
-    @Nonnull
-    @Override
-    public String getDashMpdUrl() throws ParsingException {
-        return "";
-    }
-
-    @Nonnull
-    @Override
-    public String getHlsUrl() {
-        return "";
     }
 
     @Override
@@ -194,18 +142,6 @@ public class MediaCCCStreamExtractor extends StreamExtractor {
 
     @Override
     public List<VideoStream> getVideoOnlyStreams() {
-        return null;
-    }
-
-    @Nonnull
-    @Override
-    public List<SubtitlesStream> getSubtitlesDefault() {
-        return Collections.emptyList();
-    }
-
-    @Nonnull
-    @Override
-    public List<SubtitlesStream> getSubtitles(final MediaFormat format) {
         return Collections.emptyList();
     }
 
@@ -215,26 +151,15 @@ public class MediaCCCStreamExtractor extends StreamExtractor {
     }
 
     @Override
-    public StreamInfoItemsCollector getRelatedStreams() {
-        return new StreamInfoItemsCollector(getServiceId());
-    }
-
-    @Override
-    public String getErrorMessage() {
-        return null;
-    }
-
-    @Override
     public void onFetchPage(@Nonnull final Downloader downloader)
             throws IOException, ExtractionException {
+        final String videoUrl = MediaCCCStreamLinkHandlerFactory.VIDEO_API_ENDPOINT + getId();
         try {
-            data = JsonParser.object().from(
-                    downloader.get(getLinkHandler().getUrl()).responseBody());
+            data = JsonParser.object().from(downloader.get(videoUrl).responseBody());
             conferenceData = JsonParser.object()
-                    .from(downloader.get(getUploaderUrl()).responseBody());
+                    .from(downloader.get(data.getString("conference_url")).responseBody());
         } catch (JsonParserException jpe) {
-            throw new ExtractionException("Could not parse json returned by url: "
-                    + getLinkHandler().getUrl(), jpe);
+            throw new ExtractionException("Could not parse json returned by url: " + videoUrl, jpe);
         }
     }
 
@@ -251,39 +176,13 @@ public class MediaCCCStreamExtractor extends StreamExtractor {
     }
 
     @Override
-    public String getHost() {
-        return "";
-    }
-
-    @Override
-    public String getPrivacy() {
-        return "";
-    }
-
-    @Override
-    public String getCategory() {
-        return "";
-    }
-
-    @Override
-    public String getLicence() {
-        return "";
-    }
-
-    @Override
-    public Locale getLanguageInfo() {
-        return null;
+    public Locale getLanguageInfo() throws ParsingException {
+        return Localization.getLocaleFromThreeLetterCode(data.getString("original_language"));
     }
 
     @Nonnull
     @Override
     public List<String> getTags() {
-        return new ArrayList<>();
-    }
-
-    @Nonnull
-    @Override
-    public String getSupportInfo() {
-        return "";
+        return JsonUtils.getStringListFromJsonArray(data.getArray("tags"));
     }
 }

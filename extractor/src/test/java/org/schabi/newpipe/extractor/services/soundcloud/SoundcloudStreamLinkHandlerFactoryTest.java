@@ -1,8 +1,8 @@
 package org.schabi.newpipe.extractor.services.soundcloud;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.schabi.newpipe.DownloaderTestImpl;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.schabi.newpipe.downloader.DownloaderTestImpl;
 import org.schabi.newpipe.extractor.NewPipe;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.services.soundcloud.linkHandler.SoundcloudStreamLinkHandlerFactory;
@@ -10,7 +10,7 @@ import org.schabi.newpipe.extractor.services.soundcloud.linkHandler.SoundcloudSt
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Test for {@link SoundcloudStreamLinkHandlerFactory}
@@ -18,15 +18,15 @@ import static org.junit.Assert.*;
 public class SoundcloudStreamLinkHandlerFactoryTest {
     private static SoundcloudStreamLinkHandlerFactory linkHandler;
 
-    @BeforeClass
+    @BeforeAll
     public static void setUp() throws Exception {
         linkHandler = SoundcloudStreamLinkHandlerFactory.getInstance();
         NewPipe.init(DownloaderTestImpl.getInstance());
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void getIdWithNullAsUrl() throws ParsingException {
-        linkHandler.fromUrl(null).getId();
+    @Test
+    public void getIdWithNullAsUrl() {
+        assertThrows(IllegalArgumentException.class, () -> linkHandler.fromUrl(null));
     }
 
     @Test
@@ -53,6 +53,7 @@ public class SoundcloudStreamLinkHandlerFactoryTest {
         assertEquals("309689103", linkHandler.fromUrl("https://soundcloud.com/liluzivert/15-ysl").getId());
         assertEquals("309689082", linkHandler.fromUrl("https://www.soundcloud.com/liluzivert/15-luv-scars-ko").getId());
         assertEquals("309689035", linkHandler.fromUrl("http://soundcloud.com/liluzivert/15-boring-shit").getId());
+        assertEquals("259273264", linkHandler.fromUrl("https://soundcloud.com/liluzivert/ps-qs-produced-by-don-cannon/").getId());
         assertEquals("294488599", linkHandler.fromUrl("http://www.soundcloud.com/liluzivert/secure-the-bag-produced-by-glohan-beats").getId());
         assertEquals("294488438", linkHandler.fromUrl("HtTpS://sOuNdClOuD.cOm/LiLuZiVeRt/In-O4-pRoDuCeD-bY-dP-bEaTz").getId());
         assertEquals("294488147", linkHandler.fromUrl("https://soundcloud.com/liluzivert/fresh-produced-by-zaytoven#t=69").getId());
@@ -60,6 +61,7 @@ public class SoundcloudStreamLinkHandlerFactoryTest {
         assertEquals("294487684", linkHandler.fromUrl("https://soundcloud.com/liluzivert/blonde-brigitte-produced-manny-fresh#t=1:9").getId());
         assertEquals("294487428", linkHandler.fromUrl("https://soundcloud.com/liluzivert/today-produced-by-c-note#t=1m9s").getId());
         assertEquals("294487157", linkHandler.fromUrl("https://soundcloud.com/liluzivert/changed-my-phone-produced-by-c-note#t=1m09s").getId());
+        assertEquals("44556776", linkHandler.fromUrl("https://soundcloud.com/kechuspider-sets-1/last-days").getId());
     }
 
 
