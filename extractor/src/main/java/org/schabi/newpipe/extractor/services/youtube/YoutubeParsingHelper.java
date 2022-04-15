@@ -556,7 +556,7 @@ public final class YoutubeParsingHelper {
         }
     }
 
-    private static JsonObject getInitialData(final String html) throws ParsingException {
+    public static JsonObject getInitialData(final String html) throws ParsingException {
         try {
             return JsonParser.object().from(getStringResultFromRegexArray(html,
                     INITIAL_DATA_REGEXES, 1));
