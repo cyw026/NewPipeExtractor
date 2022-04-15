@@ -4,8 +4,8 @@ import com.grack.nanojson.JsonArray;
 import com.grack.nanojson.JsonObject;
 import com.grack.nanojson.JsonParser;
 import com.grack.nanojson.JsonParserException;
+
 import org.schabi.newpipe.extractor.MediaFormat;
-import org.schabi.newpipe.extractor.MetaInfo;
 import org.schabi.newpipe.extractor.StreamingService;
 import org.schabi.newpipe.extractor.downloader.Downloader;
 import org.schabi.newpipe.extractor.exceptions.ExtractionException;
@@ -15,16 +15,20 @@ import org.schabi.newpipe.extractor.localization.DateWrapper;
 import org.schabi.newpipe.extractor.localization.Localization;
 import org.schabi.newpipe.extractor.services.media_ccc.linkHandler.MediaCCCConferenceLinkHandlerFactory;
 import org.schabi.newpipe.extractor.services.media_ccc.linkHandler.MediaCCCStreamLinkHandlerFactory;
-import org.schabi.newpipe.extractor.stream.*;
+import org.schabi.newpipe.extractor.stream.AudioStream;
+import org.schabi.newpipe.extractor.stream.Description;
+import org.schabi.newpipe.extractor.stream.StreamExtractor;
+import org.schabi.newpipe.extractor.stream.StreamType;
+import org.schabi.newpipe.extractor.stream.VideoStream;
 import org.schabi.newpipe.extractor.utils.JsonUtils;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+
+import javax.annotation.Nonnull;
 
 public class MediaCCCStreamExtractor extends StreamExtractor {
     private JsonObject data;
@@ -59,33 +63,13 @@ public class MediaCCCStreamExtractor extends StreamExtractor {
     }
 
     @Override
-    public int getAgeLimit() {
-        return 0;
-    }
-
-    @Override
     public long getLength() {
         return data.getInt("length");
     }
 
     @Override
-    public long getTimeStamp() {
-        return 0;
-    }
-
-    @Override
     public long getViewCount() {
         return data.getInt("view_count");
-    }
-
-    @Override
-    public long getLikeCount() {
-        return -1;
-    }
-
-    @Override
-    public long getDislikeCount() {
-        return -1;
     }
 
     @Nonnull
@@ -101,45 +85,10 @@ public class MediaCCCStreamExtractor extends StreamExtractor {
                 .replaceFirst("https://(api\\.)?media\\.ccc\\.de/public/conferences/", "");
     }
 
-    @Override
-    public boolean isUploaderVerified() throws ParsingException {
-        return false;
-    }
-
     @Nonnull
     @Override
     public String getUploaderAvatarUrl() {
         return conferenceData.getString("logo_url");
-    }
-
-    @Nonnull
-    @Override
-    public String getSubChannelUrl() {
-        return "";
-    }
-
-    @Nonnull
-    @Override
-    public String getSubChannelName() {
-        return "";
-    }
-
-    @Nonnull
-    @Override
-    public String getSubChannelAvatarUrl() {
-        return "";
-    }
-
-    @Nonnull
-    @Override
-    public String getDashMpdUrl() {
-        return "";
-    }
-
-    @Nonnull
-    @Override
-    public String getHlsUrl() {
-        return "";
     }
 
     @Override
@@ -200,32 +149,9 @@ public class MediaCCCStreamExtractor extends StreamExtractor {
         return Collections.emptyList();
     }
 
-    @Nonnull
-    @Override
-    public List<SubtitlesStream> getSubtitlesDefault() {
-        return Collections.emptyList();
-    }
-
-    @Nonnull
-    @Override
-    public List<SubtitlesStream> getSubtitles(final MediaFormat format) {
-        return Collections.emptyList();
-    }
-
     @Override
     public StreamType getStreamType() {
         return StreamType.VIDEO_STREAM;
-    }
-
-    @Nullable
-    @Override
-    public StreamInfoItemsCollector getRelatedItems() {
-        return null;
-    }
-
-    @Override
-    public String getErrorMessage() {
-        return null;
     }
 
     @Override
@@ -236,7 +162,7 @@ public class MediaCCCStreamExtractor extends StreamExtractor {
             data = JsonParser.object().from(downloader.get(videoUrl).responseBody());
             conferenceData = JsonParser.object()
                     .from(downloader.get(data.getString("conference_url")).responseBody());
-        } catch (JsonParserException jpe) {
+        } catch (final JsonParserException jpe) {
             throw new ExtractionException("Could not parse json returned by url: " + videoUrl, jpe);
         }
     }
@@ -253,30 +179,6 @@ public class MediaCCCStreamExtractor extends StreamExtractor {
         return data.getString("frontend_link");
     }
 
-    @Nonnull
-    @Override
-    public String getHost() {
-        return "";
-    }
-
-    @Nonnull
-    @Override
-    public Privacy getPrivacy() {
-        return Privacy.PUBLIC;
-    }
-
-    @Nonnull
-    @Override
-    public String getCategory() {
-        return "";
-    }
-
-    @Nonnull
-    @Override
-    public String getLicence() {
-        return "";
-    }
-
     @Override
     public Locale getLanguageInfo() throws ParsingException {
         return Localization.getLocaleFromThreeLetterCode(data.getString("original_language"));
@@ -286,23 +188,5 @@ public class MediaCCCStreamExtractor extends StreamExtractor {
     @Override
     public List<String> getTags() {
         return JsonUtils.getStringListFromJsonArray(data.getArray("tags"));
-    }
-
-    @Nonnull
-    @Override
-    public String getSupportInfo() {
-        return "";
-    }
-
-    @Nonnull
-    @Override
-    public List<StreamSegment> getStreamSegments() {
-        return Collections.emptyList();
-    }
-
-    @Nonnull
-    @Override
-    public List<MetaInfo> getMetaInfo() {
-        return Collections.emptyList();
     }
 }

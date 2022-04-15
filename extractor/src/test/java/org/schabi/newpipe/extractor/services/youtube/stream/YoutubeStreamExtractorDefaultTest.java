@@ -1,8 +1,34 @@
+/*
+ * Created by Christian Schabesberger on 30.12.15.
+ *
+ * Copyright (C) Christian Schabesberger 2015 <chris.schabesberger@mailbox.org>
+ * YoutubeVideoExtractorDefault.java is part of NewPipe Extractor.
+ *
+ * NewPipe Extractor is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * NewPipe Extractor is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with NewPipe Extractor. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package org.schabi.newpipe.extractor.services.youtube.stream;
 
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.schabi.newpipe.extractor.ServiceList.YouTube;
+import static org.schabi.newpipe.extractor.utils.Utils.EMPTY_STRING;
+
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.schabi.newpipe.downloader.DownloaderFactory;
 import org.schabi.newpipe.downloader.DownloaderTestImpl;
 import org.schabi.newpipe.extractor.MetaInfo;
@@ -15,9 +41,12 @@ import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.exceptions.PrivateContentException;
 import org.schabi.newpipe.extractor.exceptions.YoutubeMusicPremiumContentException;
 import org.schabi.newpipe.extractor.services.DefaultStreamExtractorTest;
-import org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper;
+import org.schabi.newpipe.extractor.services.youtube.YoutubeTestsUtils;
 import org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeStreamExtractor;
-import org.schabi.newpipe.extractor.stream.*;
+import org.schabi.newpipe.extractor.stream.Description;
+import org.schabi.newpipe.extractor.stream.StreamExtractor;
+import org.schabi.newpipe.extractor.stream.StreamSegment;
+import org.schabi.newpipe.extractor.stream.StreamType;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -25,106 +54,75 @@ import java.net.URL;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Random;
 
 import javax.annotation.Nullable;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.schabi.newpipe.extractor.ExtractorAsserts.assertIsSecureUrl;
-import static org.schabi.newpipe.extractor.ServiceList.YouTube;
-import static org.schabi.newpipe.extractor.utils.Utils.EMPTY_STRING;
 
-/*
- * Created by Christian Schabesberger on 30.12.15.
- *
- * Copyright (C) Christian Schabesberger 2015 <chris.schabesberger@mailbox.org>
- * YoutubeVideoExtractorDefault.java is part of NewPipe.
- *
- * NewPipe is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * NewPipe is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with NewPipe.  If not, see <http://www.gnu.org/licenses/>.
- */
 public class YoutubeStreamExtractorDefaultTest {
     private static final String RESOURCE_PATH = DownloaderFactory.RESOURCE_PATH + "services/youtube/extractor/stream/";
     static final String BASE_URL = "https://www.youtube.com/watch?v=";
     public static final String YOUTUBE_LICENCE = "YouTube licence";
 
     public static class NotAvailable {
-        @BeforeClass
+        @BeforeAll
         public static void setUp() throws IOException {
-            YoutubeParsingHelper.resetClientVersionAndKey();
-            YoutubeParsingHelper.setNumberGenerator(new Random(1));
-            YoutubeStreamExtractor.resetDeobfuscationCode();
-            NewPipe.init(new DownloaderFactory().getDownloader(RESOURCE_PATH + "notAvailable"));
+            YoutubeTestsUtils.ensureStateless();
+            NewPipe.init(DownloaderFactory.getDownloader(RESOURCE_PATH + "notAvailable"));
         }
 
-        @Test(expected = GeographicRestrictionException.class)
-        public void geoRestrictedContent() throws Exception {
+        @Test
+        void geoRestrictedContent() throws Exception {
             final StreamExtractor extractor =
                     YouTube.getStreamExtractor(BASE_URL + "_PL2HJKxnOM");
-            extractor.fetchPage();
+            assertThrows(GeographicRestrictionException.class, extractor::fetchPage);
         }
 
-        @Test(expected = ContentNotAvailableException.class)
-        public void nonExistentFetch() throws Exception {
+        @Test
+        void nonExistentFetch() throws Exception {
             final StreamExtractor extractor =
                     YouTube.getStreamExtractor(BASE_URL + "don-t-exist");
-            extractor.fetchPage();
+            assertThrows(ContentNotAvailableException.class, extractor::fetchPage);
         }
 
-        @Test(expected = ParsingException.class)
-        public void invalidId() throws Exception {
+        @Test
+        void invalidId() throws Exception {
             final StreamExtractor extractor =
                     YouTube.getStreamExtractor(BASE_URL + "INVALID_ID_INVALID_ID");
-            extractor.fetchPage();
+            assertThrows(ParsingException.class, extractor::fetchPage);
         }
 
-        @Test(expected = PaidContentException.class)
-        public void paidContent() throws Exception {
+        @Test
+        void paidContent() throws Exception {
             final StreamExtractor extractor =
                     YouTube.getStreamExtractor(BASE_URL + "ayI2iBwGdxw");
-            extractor.fetchPage();
+            assertThrows(PaidContentException.class, extractor::fetchPage);
         }
 
-        @Test(expected = PrivateContentException.class)
-        public void privateContent() throws Exception {
+        @Test
+        void privateContent() throws Exception {
             final StreamExtractor extractor =
                     YouTube.getStreamExtractor(BASE_URL + "8VajtrESJzA");
-            extractor.fetchPage();
+            assertThrows(PrivateContentException.class, extractor::fetchPage);
         }
 
-        @Test(expected = YoutubeMusicPremiumContentException.class)
-        public void youtubeMusicPremiumContent() throws Exception {
+        @Test
+        void youtubeMusicPremiumContent() throws Exception {
             final StreamExtractor extractor =
                     YouTube.getStreamExtractor(BASE_URL + "sMJ8bRN2dak");
-            extractor.fetchPage();
+            assertThrows(YoutubeMusicPremiumContentException.class, extractor::fetchPage);
         }
     }
 
     public static class DescriptionTestPewdiepie extends DefaultStreamExtractorTest {
         private static final String ID = "7PIMiDcwNvc";
-        private static final int TIMESTAMP = 17;
-        private static final String URL = BASE_URL + ID + "&t=" + TIMESTAMP;
+        private static final int TIMESTAMP = 7483;
+        private static final String URL = BASE_URL + ID + "&t=" + TIMESTAMP + "s";
         private static StreamExtractor extractor;
 
-        @BeforeClass
+        @BeforeAll
         public static void setUp() throws Exception {
-            YoutubeParsingHelper.resetClientVersionAndKey();
-            YoutubeParsingHelper.setNumberGenerator(new Random(1));
-            YoutubeStreamExtractor.resetDeobfuscationCode();
-            NewPipe.init(new DownloaderFactory().getDownloader(RESOURCE_PATH + "pewdiwpie"));
+            YoutubeTestsUtils.ensureStateless();
+            NewPipe.init(DownloaderFactory.getDownloader(RESOURCE_PATH + "pewdiwpie"));
             extractor = YouTube.getStreamExtractor(URL);
             extractor.fetchPage();
         }
@@ -140,6 +138,7 @@ public class YoutubeStreamExtractorDefaultTest {
         @Override public StreamType expectedStreamType() { return StreamType.VIDEO_STREAM; }
         @Override public String expectedUploaderName() { return "PewDiePie"; }
         @Override public String expectedUploaderUrl() { return "https://www.youtube.com/channel/UC-lHJZR3Gqxm24_Vd_AJ5Yw"; }
+        @Override public long expectedUploaderSubscriberCountAtLeast() { return 110_000_000; }
         @Override public List<String> expectedDescriptionContains() {
             return Arrays.asList("https://www.youtube.com/channel/UC7l23W7gFi4Uho6WSzckZRA",
                     "https://www.handcraftpictures.com/");
@@ -151,7 +150,7 @@ public class YoutubeStreamExtractorDefaultTest {
         @Nullable @Override public String expectedUploadDate() { return "2019-08-24 00:00:00.000"; }
         @Nullable @Override public String expectedTextualUploadDate() { return "2019-08-24"; }
         @Override public long expectedLikeCountAtLeast() { return 5212900; }
-        @Override public long expectedDislikeCountAtLeast() { return 30600; }
+        @Override public long expectedDislikeCountAtLeast() { return -1; }
         @Override public int expectedStreamSegmentsCount() { return 0; }
         @Override public String expectedLicence() { return YOUTUBE_LICENCE; }
         @Override public String expectedCategory() { return "Entertainment"; }
@@ -163,12 +162,10 @@ public class YoutubeStreamExtractorDefaultTest {
         private static final String URL = BASE_URL + ID;
         private static StreamExtractor extractor;
 
-        @BeforeClass
+        @BeforeAll
         public static void setUp() throws Exception {
-            YoutubeParsingHelper.resetClientVersionAndKey();
-            YoutubeParsingHelper.setNumberGenerator(new Random(1));
-            YoutubeStreamExtractor.resetDeobfuscationCode();
-            NewPipe.init(new DownloaderFactory().getDownloader(RESOURCE_PATH + "unboxing"));
+            YoutubeTestsUtils.ensureStateless();
+            NewPipe.init(DownloaderFactory.getDownloader(RESOURCE_PATH + "unboxing"));
             extractor = YouTube.getStreamExtractor(URL);
             extractor.fetchPage();
         }
@@ -184,6 +181,7 @@ public class YoutubeStreamExtractorDefaultTest {
         @Override public StreamType expectedStreamType() { return StreamType.VIDEO_STREAM; }
         @Override public String expectedUploaderName() { return "Unbox Therapy"; }
         @Override public String expectedUploaderUrl() { return "https://www.youtube.com/channel/UCsTcErHg8oDvUnTzoqsYeNw"; }
+        @Override public long expectedUploaderSubscriberCountAtLeast() { return 18_000_000; }
         @Override public List<String> expectedDescriptionContains() {
             return Arrays.asList("https://www.youtube.com/watch?v=X7FLCHVXpsA&list=PL7u4lWXQ3wfI_7PgX0C-VTiwLeu0S4v34",
                     "https://www.youtube.com/watch?v=Lqv6G0pDNnw&list=PL7u4lWXQ3wfI_7PgX0C-VTiwLeu0S4v34",
@@ -195,7 +193,7 @@ public class YoutubeStreamExtractorDefaultTest {
         @Nullable @Override public String expectedUploadDate() { return "2018-06-19 00:00:00.000"; }
         @Nullable @Override public String expectedTextualUploadDate() { return "2018-06-19"; }
         @Override public long expectedLikeCountAtLeast() { return 340100; }
-        @Override public long expectedDislikeCountAtLeast() { return 18700; }
+        @Override public long expectedDislikeCountAtLeast() { return -1; }
         @Override public boolean expectedUploaderVerified() { return true; }
         @Override public String expectedLicence() { return YOUTUBE_LICENCE; }
         @Override public String expectedCategory() { return "Science & Technology"; }
@@ -210,19 +208,17 @@ public class YoutubeStreamExtractorDefaultTest {
         // @formatter:on
     }
 
-    @Ignore("Test broken, video was made private")
+    @Disabled("Test broken, video was made private")
     public static class RatingsDisabledTest extends DefaultStreamExtractorTest {
         private static final String ID = "HRKu0cvrr_o";
         private static final int TIMESTAMP = 17;
         private static final String URL = BASE_URL + ID + "&t=" + TIMESTAMP;
         private static StreamExtractor extractor;
 
-        @BeforeClass
+        @BeforeAll
         public static void setUp() throws Exception {
-            YoutubeParsingHelper.resetClientVersionAndKey();
-            YoutubeParsingHelper.setNumberGenerator(new Random(1));
-            YoutubeStreamExtractor.resetDeobfuscationCode();
-            NewPipe.init(new DownloaderFactory().getDownloader(RESOURCE_PATH + "ratingsDisabled"));
+            YoutubeTestsUtils.ensureStateless();
+            NewPipe.init(DownloaderFactory.getDownloader(RESOURCE_PATH + "ratingsDisabled"));
             extractor = YouTube.getStreamExtractor(URL);
             extractor.fetchPage();
         }
@@ -255,12 +251,10 @@ public class YoutubeStreamExtractorDefaultTest {
         private static final String URL = BASE_URL + ID;
         private static StreamExtractor extractor;
 
-        @BeforeClass
+        @BeforeAll
         public static void setUp() throws Exception {
-            YoutubeParsingHelper.resetClientVersionAndKey();
-            YoutubeParsingHelper.setNumberGenerator(new Random(1));
-            YoutubeStreamExtractor.resetDeobfuscationCode();
-            NewPipe.init(new DownloaderFactory().getDownloader(RESOURCE_PATH + "streamSegmentsTagesschau"));
+            YoutubeTestsUtils.ensureStateless();
+            NewPipe.init(DownloaderFactory.getDownloader(RESOURCE_PATH + "streamSegmentsTagesschau"));
             extractor = YouTube.getStreamExtractor(URL);
             extractor.fetchPage();
         }
@@ -276,6 +270,7 @@ public class YoutubeStreamExtractorDefaultTest {
         @Override public StreamType expectedStreamType() { return StreamType.VIDEO_STREAM; }
         @Override public String expectedUploaderName() { return "tagesschau"; }
         @Override public String expectedUploaderUrl() { return "https://www.youtube.com/channel/UC5NOEUbkLheQcaaRldYW5GA"; }
+        @Override public long expectedUploaderSubscriberCountAtLeast() { return 1_000_000; }
         @Override public boolean expectedUploaderVerified() { return true; }
         @Override public List<String> expectedDescriptionContains() {
             return Arrays.asList("Themen der Sendung", "07:15", "Wetter", "Sendung nachträglich bearbeitet");
@@ -285,7 +280,7 @@ public class YoutubeStreamExtractorDefaultTest {
         @Nullable @Override public String expectedUploadDate() { return "2021-03-17 00:00:00.000"; }
         @Nullable @Override public String expectedTextualUploadDate() { return "2021-03-17"; }
         @Override public long expectedLikeCountAtLeast() { return 2300; }
-        @Override public long expectedDislikeCountAtLeast() { return 450; }
+        @Override public long expectedDislikeCountAtLeast() { return -1; }
         @Override public boolean expectedHasSubtitles() { return false; }
         @Override public int expectedStreamSegmentsCount() { return 13; }
         @Override public String expectedLicence() { return YOUTUBE_LICENCE; }
@@ -293,7 +288,7 @@ public class YoutubeStreamExtractorDefaultTest {
         // @formatter:on
 
         @Test
-        public void testStreamSegment0() throws Exception {
+        void testStreamSegment0() throws Exception {
             final StreamSegment segment = extractor.getStreamSegments().get(0);
             assertEquals(0, segment.getStartTimeSeconds());
             assertEquals("Guten Abend", segment.getTitle());
@@ -302,7 +297,7 @@ public class YoutubeStreamExtractorDefaultTest {
         }
 
         @Test
-        public void testStreamSegment3() throws Exception {
+        void testStreamSegment3() throws Exception {
             final StreamSegment segment = extractor.getStreamSegments().get(3);
             assertEquals(224, segment.getStartTimeSeconds());
             assertEquals("Pandemie dämpft Konjunkturprognose für 2021", segment.getTitle());
@@ -317,12 +312,10 @@ public class YoutubeStreamExtractorDefaultTest {
         private static final String URL = BASE_URL + ID;
         private static StreamExtractor extractor;
 
-        @BeforeClass
+        @BeforeAll
         public static void setUp() throws Exception {
-            YoutubeParsingHelper.resetClientVersionAndKey();
-            YoutubeParsingHelper.setNumberGenerator(new Random(1));
-            YoutubeStreamExtractor.resetDeobfuscationCode();
-            NewPipe.init(new DownloaderFactory().getDownloader(RESOURCE_PATH + "streamSegmentsMaiLab"));
+            YoutubeTestsUtils.ensureStateless();
+            NewPipe.init(DownloaderFactory.getDownloader(RESOURCE_PATH + "streamSegmentsMaiLab"));
             extractor = YouTube.getStreamExtractor(URL);
             extractor.fetchPage();
         }
@@ -338,6 +331,7 @@ public class YoutubeStreamExtractorDefaultTest {
         @Override public StreamType expectedStreamType() { return StreamType.VIDEO_STREAM; }
         @Override public String expectedUploaderName() { return "maiLab"; }
         @Override public String expectedUploaderUrl() { return "https://www.youtube.com/channel/UCyHDQ5C6z1NDmJ4g6SerW8g"; }
+        @Override public long expectedUploaderSubscriberCountAtLeast() { return 1_400_000; }
         @Override public List<String> expectedDescriptionContains()  {return Arrays.asList("Vitamin", "2:44", "Was ist Vitamin D?");}
         @Override public boolean expectedUploaderVerified() { return true; }
         @Override public long expectedLength() { return 1010; }
@@ -345,7 +339,7 @@ public class YoutubeStreamExtractorDefaultTest {
         @Nullable @Override public String expectedUploadDate() { return "2020-11-18 00:00:00.000"; }
         @Nullable @Override public String expectedTextualUploadDate() { return "2020-11-18"; }
         @Override public long expectedLikeCountAtLeast() { return 48500; }
-        @Override public long expectedDislikeCountAtLeast() { return 20000; }
+        @Override public long expectedDislikeCountAtLeast() { return -1; }
         @Override public boolean expectedHasSubtitles() { return true; }
         @Override public int expectedStreamSegmentsCount() { return 7; }
         @Override public String expectedLicence() { return YOUTUBE_LICENCE; }
@@ -361,7 +355,7 @@ public class YoutubeStreamExtractorDefaultTest {
         // @formatter:on
 
         @Test
-        public void testStreamSegment() throws Exception {
+        void testStreamSegment() throws Exception {
             final StreamSegment segment = extractor.getStreamSegments().get(1);
             assertEquals(164, segment.getStartTimeSeconds());
             assertEquals("Was ist Vitamin D?", segment.getTitle());
@@ -371,12 +365,12 @@ public class YoutubeStreamExtractorDefaultTest {
 
         @Override
         @Test
-        @Ignore("encoding problem")
+        @Disabled("encoding problem")
         public void testName() {}
 
         @Override
         @Test
-        @Ignore("encoding problem")
+        @Disabled("encoding problem")
         public void testTags() {}
     }
 
@@ -386,13 +380,11 @@ public class YoutubeStreamExtractorDefaultTest {
         private static final String URL = BASE_URL + ID;
         private static StreamExtractor extractor;
 
-        @BeforeClass
+        @BeforeAll
         public static void setUp() throws Exception {
-            YoutubeParsingHelper.resetClientVersionAndKey();
-            YoutubeParsingHelper.setNumberGenerator(new Random(1));
-            NewPipe.init(new DownloaderFactory().getDownloader(RESOURCE_PATH + "publicBroadcast"));
+            YoutubeTestsUtils.ensureStateless();
+            NewPipe.init(DownloaderFactory.getDownloader(RESOURCE_PATH + "publicBroadcast"));
             extractor = YouTube.getStreamExtractor(URL);
-            YoutubeStreamExtractor.resetDeobfuscationCode();
             extractor.fetchPage();
         }
 
@@ -407,6 +399,7 @@ public class YoutubeStreamExtractorDefaultTest {
         @Override public StreamType expectedStreamType() { return StreamType.VIDEO_STREAM; }
         @Override public String expectedUploaderName() { return "Dinge Erklärt – Kurzgesagt"; }
         @Override public String expectedUploaderUrl() { return "https://www.youtube.com/channel/UCwRH985XgMYXQ6NxXDo8npw"; }
+        @Override public long expectedUploaderSubscriberCountAtLeast() { return 1_500_000; }
         @Override public List<String> expectedDescriptionContains() { return Arrays.asList("Lasst uns abtauchen!", "Angebot von funk", "Dinge"); }
         @Override public long expectedLength() { return 631; }
         @Override public long expectedTimestamp() { return TIMESTAMP; }
@@ -414,7 +407,7 @@ public class YoutubeStreamExtractorDefaultTest {
         @Nullable @Override public String expectedUploadDate() { return "2019-06-12 00:00:00.000"; }
         @Nullable @Override public String expectedTextualUploadDate() { return "2019-06-12"; }
         @Override public long expectedLikeCountAtLeast() { return 70000; }
-        @Override public long expectedDislikeCountAtLeast() { return 500; }
+        @Override public long expectedDislikeCountAtLeast() { return -1; }
         @Override public List<MetaInfo> expectedMetaInfo() throws MalformedURLException {
             return Collections.singletonList(new MetaInfo(
                     EMPTY_STRING,
@@ -440,9 +433,9 @@ public class YoutubeStreamExtractorDefaultTest {
     public static class UnlistedTest {
         private static YoutubeStreamExtractor extractor;
 
-        @BeforeClass
+        @BeforeAll
         public static void setUp() throws Exception {
-            YoutubeStreamExtractor.resetDeobfuscationCode();
+            YoutubeTestsUtils.ensureStateless();
             NewPipe.init(DownloaderTestImpl.getInstance());
             extractor = (YoutubeStreamExtractor) YouTube
                     .getStreamExtractor("https://www.youtube.com/watch?v=tjz2u2DiveM");
@@ -450,7 +443,7 @@ public class YoutubeStreamExtractorDefaultTest {
         }
 
         @Test
-        public void testGetUnlisted() {
+        void testGetUnlisted() {
             assertEquals(StreamExtractor.Privacy.UNLISTED, extractor.getPrivacy());
         }
     }
@@ -460,29 +453,17 @@ public class YoutubeStreamExtractorDefaultTest {
         private static final String URL = BASE_URL + ID;
         private static StreamExtractor extractor;
 
-        @BeforeClass
+        @BeforeAll
         public static void setUp() throws Exception {
-            YoutubeStreamExtractor.resetDeobfuscationCode();
+            YoutubeTestsUtils.ensureStateless();
             NewPipe.init(DownloaderTestImpl.getInstance());
             extractor = YouTube.getStreamExtractor(URL);
             extractor.fetchPage();
         }
 
         @Test
-        public void testAudioStreams() throws Exception {
-            final List<AudioStream> audioStreams = extractor.getAudioStreams();
-            assertNotNull(audioStreams);
-
-            assertFalse(audioStreams.isEmpty());
-
-            for (final AudioStream stream : audioStreams) {
-                assertIsSecureUrl(stream.getUrl());
-
-                final int formatId = stream.getFormatId();
-                // see MediaFormat: video stream formats range from 0x100 to 0x1000
-                assertTrue("format id does not fit an audio stream: " + formatId,
-                        0x100 <= formatId && formatId < 0x1000);
-            }
+        void testGetLicence() throws ParsingException {
+            assertEquals("Creative Commons Attribution licence (reuse allowed)", extractor.getLicence());
         }
     }
 }

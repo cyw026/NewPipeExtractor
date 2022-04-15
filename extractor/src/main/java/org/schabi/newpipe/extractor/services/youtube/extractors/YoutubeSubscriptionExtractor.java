@@ -46,7 +46,8 @@ public class YoutubeSubscriptionExtractor extends SubscriptionExtractor {
     }
 
     @Override
-    public List<SubscriptionItem> fromInputStream(@Nonnull final InputStream contentInputStream, String contentType)
+    public List<SubscriptionItem> fromInputStream(@Nonnull final InputStream contentInputStream,
+                                                  @Nonnull final String contentType)
             throws ExtractionException {
         switch (contentType) {
             case "json":
@@ -69,7 +70,7 @@ public class YoutubeSubscriptionExtractor extends SubscriptionExtractor {
         final JsonArray subscriptions;
         try {
             subscriptions = JsonParser.array().from(contentInputStream);
-        } catch (JsonParserException e) {
+        } catch (final JsonParserException e) {
             throw new InvalidSourceException("Invalid json input stream", e);
         }
 
@@ -100,39 +101,37 @@ public class YoutubeSubscriptionExtractor extends SubscriptionExtractor {
 
     public List<SubscriptionItem> fromZipInputStream(@Nonnull final InputStream contentInputStream)
             throws ExtractionException {
-        final ZipInputStream zipInputStream = new ZipInputStream(contentInputStream);
-
-        try {
+        try (ZipInputStream zipInputStream = new ZipInputStream(contentInputStream)) {
             ZipEntry zipEntry;
             while ((zipEntry = zipInputStream.getNextEntry()) != null) {
                 if (zipEntry.getName().toLowerCase().endsWith(".csv")) {
                     try {
                         final List<SubscriptionItem> csvItems = fromCsvInputStream(zipInputStream);
 
-                        // Return it only if it has items (it exits early if it's the wrong file format)
-                        // Otherwise try the next file
+                        // Return it only if it has items (it exits early if it's the wrong file
+                        // format), otherwise try the next file
                         if (csvItems.size() > 0) {
                             return csvItems;
                         }
-                    } catch (ExtractionException e) {
+                    } catch (final ExtractionException e) {
                         // Ignore error and go to next file
-                        // (maybe log it?)
                     }
                 }
             }
-        } catch (IOException e) {
+        } catch (final IOException e) {
             throw new InvalidSourceException("Error reading contents of zip file", e);
         }
 
-        throw new InvalidSourceException("Unable to find a valid subscriptions.csv file (try extracting and selecting the csv file)");
+        throw new InvalidSourceException("Unable to find a valid subscriptions.csv file"
+                + " (try extracting and selecting the csv file)");
     }
 
     public List<SubscriptionItem> fromCsvInputStream(@Nonnull final InputStream contentInputStream)
             throws ExtractionException {
         // Expected format of CSV file:
-        //      Channel Id,Channel Url,Channel Title
-        //      UC1JTQBa5QxZCpXrFSkMxmPw,http://www.youtube.com/channel/UC1JTQBa5QxZCpXrFSkMxmPw,Raycevick
-        //      UCFl7yKfcRcFmIUbKeCA-SJQ,http://www.youtube.com/channel/UCFl7yKfcRcFmIUbKeCA-SJQ,Joji
+        // Channel Id,Channel Url,Channel Title
+        //UC1JTQBa5QxZCpXrFSkMxmPw,http://www.youtube.com/channel/UC1JTQBa5QxZCpXrFSkMxmPw,Raycevick
+        //UCFl7yKfcRcFmIUbKeCA-SJQ,http://www.youtube.com/channel/UCFl7yKfcRcFmIUbKeCA-SJQ,Joji
         //
         // Notes:
         //      It's always 3 columns
@@ -146,7 +145,7 @@ public class YoutubeSubscriptionExtractor extends SubscriptionExtractor {
         try (BufferedReader br = new BufferedReader(new InputStreamReader(contentInputStream))) {
             final List<SubscriptionItem> subscriptionItems = new ArrayList<>();
 
-            // Ignore header
+            // ignore header and skip first line
             currentLine = 1;
             line = br.readLine();
 
@@ -160,13 +159,13 @@ public class YoutubeSubscriptionExtractor extends SubscriptionExtractor {
                 }
 
                 // First comma
-                int i1 = line.indexOf(",");
+                final int i1 = line.indexOf(",");
                 if (i1 == -1) {
                     continue;
                 }
 
                 // Second comma
-                int i2 = line.indexOf(",", i1 + 1);
+                final int i2 = line.indexOf(",", i1 + 1);
                 if (i2 == -1) {
                     continue;
                 }
@@ -188,18 +187,20 @@ public class YoutubeSubscriptionExtractor extends SubscriptionExtractor {
                 // Channel title from third entry
                 final String channelTitle = line.substring(i2 + 1, i3);
 
-                final SubscriptionItem newItem = new SubscriptionItem(service.getServiceId(), channelUrl, channelTitle);
+                final SubscriptionItem newItem
+                        = new SubscriptionItem(service.getServiceId(), channelUrl, channelTitle);
                 subscriptionItems.add(newItem);
             }
 
             return subscriptionItems;
-        } catch (IOException e) {
+        } catch (final IOException e) {
             if (line == null) {
                 line = "<null>";
             } else if (line.length() > 10) {
                 line = line.substring(0, 10) + "...";
             }
-            throw new InvalidSourceException("Error reading CSV file, line = '" + line + "', line number = " + currentLine);
+            throw new InvalidSourceException("Error reading CSV file on line = \"" + line
+                    + "\", line number = " + currentLine, e);
         }
     }
 }

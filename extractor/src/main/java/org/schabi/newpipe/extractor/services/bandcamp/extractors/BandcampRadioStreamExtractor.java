@@ -26,28 +26,31 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import static org.schabi.newpipe.extractor.services.bandcamp.extractors.BandcampExtractorHelper.*;
+import static org.schabi.newpipe.extractor.services.bandcamp.extractors.BandcampExtractorHelper.BASE_API_URL;
+import static org.schabi.newpipe.extractor.services.bandcamp.extractors.BandcampExtractorHelper.BASE_URL;
+import static org.schabi.newpipe.extractor.services.bandcamp.extractors.BandcampExtractorHelper.getImageUrl;
 
 public class BandcampRadioStreamExtractor extends BandcampStreamExtractor {
 
     private JsonObject showInfo;
 
-    public BandcampRadioStreamExtractor(final StreamingService service, final LinkHandler linkHandler) {
+    public BandcampRadioStreamExtractor(final StreamingService service,
+                                        final LinkHandler linkHandler) {
         super(service, linkHandler);
     }
 
     static JsonObject query(final int id) throws ParsingException {
         try {
-            return JsonParser.object().from(
-                    NewPipe.getDownloader().get(BASE_API_URL + "/bcweekly/1/get?id=" + id).responseBody()
-            );
+            return JsonParser.object().from(NewPipe.getDownloader()
+                    .get(BASE_API_URL + "/bcweekly/1/get?id=" + id).responseBody());
         } catch (final IOException | ReCaptchaException | JsonParserException e) {
             throw new ParsingException("could not get show data", e);
         }
     }
 
     @Override
-    public void onFetchPage(@Nonnull final Downloader downloader) throws IOException, ExtractionException {
+    public void onFetchPage(@Nonnull final Downloader downloader)
+            throws IOException, ExtractionException {
         showInfo = query(Integer.parseInt(getId()));
     }
 
@@ -149,25 +152,22 @@ public class BandcampRadioStreamExtractor extends BandcampStreamExtractor {
     @Nonnull
     @Override
     public String getLicence() {
+        // Contrary to other Bandcamp streams, radio streams don't have a license
         return "";
     }
 
     @Nonnull
     @Override
     public String getCategory() {
+        // Contrary to other Bandcamp streams, radio streams don't have categories
         return "";
     }
 
     @Nonnull
     @Override
     public List<String> getTags() {
+        // Contrary to other Bandcamp streams, radio streams don't have tags
         return Collections.emptyList();
-    }
-
-    @Nonnull
-    @Override
-    public Privacy getPrivacy() {
-        return Privacy.PUBLIC;
     }
 
     @Override

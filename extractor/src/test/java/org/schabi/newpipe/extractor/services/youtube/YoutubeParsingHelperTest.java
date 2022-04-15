@@ -1,39 +1,37 @@
 package org.schabi.newpipe.extractor.services.youtube;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.schabi.newpipe.downloader.DownloaderFactory;
 import org.schabi.newpipe.extractor.NewPipe;
 import org.schabi.newpipe.extractor.exceptions.ExtractionException;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 
 import java.io.IOException;
-import java.util.Random;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 public class YoutubeParsingHelperTest {
 
     private static final String RESOURCE_PATH = DownloaderFactory.RESOURCE_PATH + "services/youtube/";
 
-    @BeforeClass
+    @BeforeAll
     public static void setUp() throws IOException {
-        YoutubeParsingHelper.resetClientVersionAndKey();
-        YoutubeParsingHelper.setNumberGenerator(new Random(1));
-        NewPipe.init(new DownloaderFactory().getDownloader(RESOURCE_PATH + "youtubeParsingHelper"));
+        YoutubeTestsUtils.ensureStateless();
+        NewPipe.init(DownloaderFactory.getDownloader(RESOURCE_PATH + "youtubeParsingHelper"));
     }
 
     @Test
     public void testAreHardcodedClientVersionAndKeyValid() throws IOException, ExtractionException {
-        assertTrue("Hardcoded client version and key are not valid anymore",
-                YoutubeParsingHelper.areHardcodedClientVersionAndKeyValid());
+        assertTrue(YoutubeParsingHelper.areHardcodedClientVersionAndKeyValid(),
+                "Hardcoded client version and key are not valid anymore");
     }
 
     @Test
     public void testAreHardcodedYoutubeMusicKeysValid() throws IOException, ExtractionException {
-        assertTrue("Hardcoded YouTube Music keys are not valid anymore",
-                YoutubeParsingHelper.isHardcodedYoutubeMusicKeyValid());
+        assertTrue(YoutubeParsingHelper.isHardcodedYoutubeMusicKeyValid(),
+                "Hardcoded YouTube Music keys are not valid anymore");
     }
 
     @Test
