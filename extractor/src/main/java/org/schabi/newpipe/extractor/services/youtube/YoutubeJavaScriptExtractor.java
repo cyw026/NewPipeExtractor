@@ -103,7 +103,7 @@ public final class YoutubeJavaScriptExtractor {
                 // playerJsUrl is still available in the file, just somewhere else TODO
                 // it is ok not to find it, see how that's handled in getDeobfuscationCode()
                 final Document doc = Jsoup.parse(embedPageContent);
-                final Elements elems = doc.select("script");
+                final Elements elems = doc.select("script").attr("name", "player_ias/base");
                 for (final Element elem : elems) {
                     if (elem.attr("src").contains("base.js")) {
                         return elem.attr("src");
