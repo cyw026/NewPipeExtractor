@@ -25,6 +25,8 @@ import org.schabi.newpipe.extractor.services.youtube.ItagItem;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Locale;
+import java.util.Objects;
 
 public final class AudioStream extends Stream {
     public static final int UNKNOWN_BITRATE = -1;
@@ -40,6 +42,17 @@ public final class AudioStream extends Stream {
     private int indexEnd;
     private String quality;
     private String codec;
+
+    // Fields about the audio track id/name
+    @Nullable
+    private final String audioTrackId;
+    @Nullable
+    private final String audioTrackName;
+    @Nullable
+    private final Locale audioLocale;
+    @Nullable
+    private final AudioTrackType audioTrackType;
+
     @Nullable
     private ItagItem itagItem;
 
@@ -57,6 +70,14 @@ public final class AudioStream extends Stream {
         @Nullable
         private String manifestUrl;
         private int averageBitrate = UNKNOWN_BITRATE;
+        @Nullable
+        private String audioTrackId;
+        @Nullable
+        private String audioTrackName;
+        @Nullable
+        private Locale audioLocale;
+        @Nullable
+        private AudioTrackType audioTrackType;
         @Nullable
         private ItagItem itagItem;
 
@@ -174,6 +195,66 @@ public final class AudioStream extends Stream {
         }
 
         /**
+         * Set the audio track id of the {@link AudioStream}.
+         *
+         * <p>
+         * The default value is {@code null}.
+         * </p>
+         *
+         * @param audioTrackId the audio track id of the {@link AudioStream}, which can be null
+         * @return this {@link Builder} instance
+         */
+        public Builder setAudioTrackId(@Nullable final String audioTrackId) {
+            this.audioTrackId = audioTrackId;
+            return this;
+        }
+
+        /**
+         * Set the audio track name of the {@link AudioStream}.
+         *
+         * <p>
+         * The default value is {@code null}.
+         * </p>
+         *
+         * @param audioTrackName the audio track name of the {@link AudioStream}, which can be null
+         * @return this {@link Builder} instance
+         */
+        public Builder setAudioTrackName(@Nullable final String audioTrackName) {
+            this.audioTrackName = audioTrackName;
+            return this;
+        }
+
+        /**
+         * Set the {@link AudioTrackType} of the {@link AudioStream}.
+         *
+         * <p>
+         * The default value is {@code null}.
+         * </p>
+         *
+         * @param audioTrackType the audio track type of the {@link AudioStream}, which can be null
+         * @return this {@link Builder} instance
+         */
+        public Builder setAudioTrackType(final AudioTrackType audioTrackType) {
+            this.audioTrackType = audioTrackType;
+            return this;
+        }
+
+        /**
+         * Set the {@link Locale} of the audio which represents its language.
+         *
+         * <p>
+         * The default value is {@code null}, which means that the {@link Locale} is unknown.
+         * </p>
+         *
+         * @param audioLocale the {@link Locale} of the audio, which could be {@code null}
+         * @return this {@link Builder} instance
+         */
+        public Builder setAudioLocale(@Nullable final Locale audioLocale) {
+            this.audioLocale = audioLocale;
+            return this;
+        }
+
+        /**
          * Set the {@link ItagItem} corresponding to the {@link AudioStream}.
          *
          * <p>
@@ -226,7 +307,8 @@ public final class AudioStream extends Stream {
             }
 
             return new AudioStream(id, content, isUrl, mediaFormat, deliveryMethod, averageBitrate,
-                    manifestUrl, itagItem);
+                    manifestUrl, audioTrackId, audioTrackName, audioLocale, audioTrackType,
+                    itagItem);
         }
     }
 
@@ -244,6 +326,9 @@ public final class AudioStream extends Stream {
      * @param deliveryMethod the {@link DeliveryMethod} of the stream
      * @param averageBitrate the average bitrate of the stream (which can be unknown, see
      *                       {@link #UNKNOWN_BITRATE})
+     * @param audioTrackId   the id of the audio track
+     * @param audioTrackName the name of the audio track
+     * @param audioLocale    the {@link Locale} of the audio stream, representing its language
      * @param itagItem       the {@link ItagItem} corresponding to the stream, which cannot be null
      * @param manifestUrl    the URL of the manifest this stream comes from (if applicable,
      *                       otherwise null)
@@ -256,6 +341,10 @@ public final class AudioStream extends Stream {
                         @Nonnull final DeliveryMethod deliveryMethod,
                         final int averageBitrate,
                         @Nullable final String manifestUrl,
+                        @Nullable final String audioTrackId,
+                        @Nullable final String audioTrackName,
+                        @Nullable final Locale audioLocale,
+                        @Nullable final AudioTrackType audioTrackType,
                         @Nullable final ItagItem itagItem) {
         super(id, content, isUrl, format, deliveryMethod, manifestUrl);
         if (itagItem != null) {
@@ -270,6 +359,10 @@ public final class AudioStream extends Stream {
             this.codec = itagItem.getCodec();
         }
         this.averageBitrate = averageBitrate;
+        this.audioTrackId = audioTrackId;
+        this.audioTrackName = audioTrackName;
+        this.audioLocale = audioLocale;
+        this.audioTrackType = audioTrackType;
     }
 
     /**
@@ -278,7 +371,10 @@ public final class AudioStream extends Stream {
     @Override
     public boolean equalStats(final Stream cmp) {
         return super.equalStats(cmp) && cmp instanceof AudioStream
-                && averageBitrate == ((AudioStream) cmp).averageBitrate;
+                && averageBitrate == ((AudioStream) cmp).averageBitrate
+                && Objects.equals(audioTrackId, ((AudioStream) cmp).audioTrackId)
+                && audioTrackType == ((AudioStream) cmp).audioTrackType
+                && Objects.equals(audioLocale, ((AudioStream) cmp).audioLocale);
     }
 
     /**
@@ -370,6 +466,49 @@ public final class AudioStream extends Stream {
      */
     public String getCodec() {
         return codec;
+    }
+
+    /**
+     * Get the id of the audio track.
+     *
+     * @return the id of the audio track
+     */
+    @Nullable
+    public String getAudioTrackId() {
+        return audioTrackId;
+    }
+
+    /**
+     * Get the name of the audio track, which may be {@code null} if this information is not
+     * provided by the service.
+     *
+     * @return the name of the audio track or {@code null}
+     */
+    @Nullable
+    public String getAudioTrackName() {
+        return audioTrackName;
+    }
+
+    /**
+     * Get the {@link Locale} of the audio representing the language of the stream, which is
+     * {@code null} if the audio language of this stream is not known.
+     *
+     * @return the {@link Locale} of the audio or {@code null}
+     */
+    @Nullable
+    public Locale getAudioLocale() {
+        return audioLocale;
+    }
+
+    /**
+     * Get the {@link AudioTrackType} of the stream, which is {@code null} if the track type
+     * is not known.
+     *
+     * @return the {@link AudioTrackType} of the stream or {@code null}
+     */
+    @Nullable
+    public AudioTrackType getAudioTrackType() {
+        return audioTrackType;
     }
 
     /**

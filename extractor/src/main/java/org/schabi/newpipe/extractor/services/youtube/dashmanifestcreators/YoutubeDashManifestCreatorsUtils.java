@@ -1,5 +1,14 @@
 package org.schabi.newpipe.extractor.services.youtube.dashmanifestcreators;
 
+import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.getAndroidUserAgent;
+import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.getClientInfoHeaders;
+import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.getIosUserAgent;
+import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.isAndroidStreamingUrl;
+import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.isIosStreamingUrl;
+import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.isTvHtml5SimplyEmbeddedPlayerStreamingUrl;
+import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.isWebStreamingUrl;
+import static org.schabi.newpipe.extractor.utils.Utils.isNullOrEmpty;
+
 import org.schabi.newpipe.extractor.MediaFormat;
 import org.schabi.newpipe.extractor.NewPipe;
 import org.schabi.newpipe.extractor.downloader.Downloader;
@@ -7,13 +16,23 @@ import org.schabi.newpipe.extractor.downloader.Response;
 import org.schabi.newpipe.extractor.exceptions.ExtractionException;
 import org.schabi.newpipe.extractor.services.youtube.DeliveryType;
 import org.schabi.newpipe.extractor.services.youtube.ItagItem;
+import org.schabi.newpipe.extractor.stream.AudioTrackType;
 import org.schabi.newpipe.extractor.utils.ManifestCreatorCache;
 import org.w3c.dom.Attr;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
+import java.io.IOException;
+import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -24,25 +43,6 @@ import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
-
-import java.io.IOException;
-import java.io.StringWriter;
-import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
-
-import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.addClientInfoHeaders;
-import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.getAndroidUserAgent;
-import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.getIosUserAgent;
-import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.isAndroidStreamingUrl;
-import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.isIosStreamingUrl;
-import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.isTvHtml5SimplyEmbeddedPlayerStreamingUrl;
-import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.isWebStreamingUrl;
-import static org.schabi.newpipe.extractor.utils.Utils.isNullOrEmpty;
 
 /**
  * Utilities and constants for YouTube DASH manifest creators.
@@ -126,7 +126,7 @@ public final class YoutubeDashManifestCreatorsUtils {
      *     <li>{@code Period} (using {@link #generatePeriodElement(Document)});</li>
      *     <li>{@code AdaptationSet} (using {@link #generateAdaptationSetElement(Document,
      *     ItagItem)});</li>
-     *     <li>{@code Role} (using {@link #generateRoleElement(Document)});</li>
+     *     <li>{@code Role} (using {@link #generateRoleElement(Document, ItagItem)});</li>
      *     <li>{@code Representation} (using {@link #generateRepresentationElement(Document,
      *     ItagItem)});</li>
      *     <li>and, for audio streams, {@code AudioChannelConfiguration} (using
@@ -146,7 +146,7 @@ public final class YoutubeDashManifestCreatorsUtils {
 
         generatePeriodElement(doc);
         generateAdaptationSetElement(doc, itagItem);
-        generateRoleElement(doc);
+        generateRoleElement(doc, itagItem);
         generateRepresentationElement(doc, itagItem);
         if (itagItem.itagType == ItagItem.ItagType.AUDIO) {
             generateAudioChannelConfigurationElement(doc, itagItem);
@@ -210,7 +210,7 @@ public final class YoutubeDashManifestCreatorsUtils {
      * {@link #generateDocumentAndMpdElement(long)}.
      * </p>
      *
-     * @param doc the {@link Document} on which the the {@code <Period>} element will be appended
+     * @param doc the {@link Document} on which the {@code <Period>} element will be appended
      */
     public static void generatePeriodElement(@Nonnull final Document doc)
             throws CreationException {
@@ -251,6 +251,16 @@ public final class YoutubeDashManifestCreatorsUtils {
                         "the MediaFormat or its mime type is null or empty");
             }
 
+            if (itagItem.itagType == ItagItem.ItagType.AUDIO) {
+                final Locale audioLocale = itagItem.getAudioLocale();
+                if (audioLocale != null) {
+                    final String audioLanguage = audioLocale.getLanguage();
+                    if (!audioLanguage.isEmpty()) {
+                        setAttribute(adaptationSetElement, doc, "lang", audioLanguage);
+                    }
+                }
+            }
+
             setAttribute(adaptationSetElement, doc, "mimeType", mediaFormat.getMimeType());
             setAttribute(adaptationSetElement, doc, "subsegmentAlignment", "true");
 
@@ -269,7 +279,9 @@ public final class YoutubeDashManifestCreatorsUtils {
      * </p>
      *
      * <p>
-     * {@code <Role schemeIdUri="urn:mpeg:DASH:role:2011" value="main"/>}
+     * {@code <Role schemeIdUri="urn:mpeg:DASH:role:2011" value="VALUE"/>}, where {@code VALUE} is
+     * {@code main} for videos and audios, {@code description} for descriptive audio and
+     * {@code dub} for dubbed audio.
      * </p>
      *
      * <p>
@@ -277,9 +289,11 @@ public final class YoutubeDashManifestCreatorsUtils {
      * {@link #generateAdaptationSetElement(Document, ItagItem)}).
      * </p>
      *
-     * @param doc the {@link Document} on which the the {@code <Role>} element will be appended
+     * @param doc      the {@link Document} on which the {@code <Role>} element will be appended
+     * @param itagItem the {@link ItagItem} corresponding to the stream, which must not be null
      */
-    public static void generateRoleElement(@Nonnull final Document doc)
+    public static void generateRoleElement(@Nonnull final Document doc,
+                                           @Nonnull final ItagItem itagItem)
             throws CreationException {
         try {
             final Element adaptationSetElement = (Element) doc.getElementsByTagName(
@@ -287,12 +301,34 @@ public final class YoutubeDashManifestCreatorsUtils {
             final Element roleElement = doc.createElement(ROLE);
 
             setAttribute(roleElement, doc, "schemeIdUri", "urn:mpeg:DASH:role:2011");
-            setAttribute(roleElement, doc, "value", "main");
+            setAttribute(roleElement, doc, "value", getRoleValue(itagItem.getAudioTrackType()));
 
             adaptationSetElement.appendChild(roleElement);
         } catch (final DOMException e) {
             throw CreationException.couldNotAddElement(ROLE, e);
         }
+    }
+
+    /**
+     * Get the value of the {@code <Role>} element based on the {@link AudioTrackType} attribute
+     * of a stream.
+     * @param trackType audio track type
+     * @return role value
+     */
+    private static String getRoleValue(@Nullable final AudioTrackType trackType) {
+        if (trackType != null) {
+            switch (trackType) {
+                case ORIGINAL:
+                    return "main";
+                case DUBBED:
+                    return "dub";
+                case DESCRIPTIVE:
+                    return "description";
+                default:
+                    return "alternate";
+            }
+        }
+        return "main";
     }
 
     /**
@@ -304,7 +340,7 @@ public final class YoutubeDashManifestCreatorsUtils {
      * {@link #generateAdaptationSetElement(Document, ItagItem)}).
      * </p>
      *
-     * @param doc the {@link Document} on which the the {@code <SegmentTimeline>} element will be
+     * @param doc the {@link Document} on which the {@code <SegmentTimeline>} element will be
      *            appended
      * @param itagItem the {@link ItagItem} to use, which must not be null
      */
@@ -524,7 +560,7 @@ public final class YoutubeDashManifestCreatorsUtils {
      * {@link #generateSegmentTemplateElement(Document, String, DeliveryType)}.
      * </p>
      *
-     * @param doc the {@link Document} on which the the {@code <SegmentTimeline>} element will be
+     * @param doc the {@link Document} on which the {@code <SegmentTimeline>} element will be
      *            appended
      */
     public static void generateSegmentTimelineElement(@Nonnull final Document doc)
@@ -584,9 +620,9 @@ public final class YoutubeDashManifestCreatorsUtils {
             }
         } else if (isAndroidStreamingUrl || isIosStreamingUrl) {
             try {
-                final Map<String, List<String>> headers = Collections.singletonMap("User-Agent",
-                        Collections.singletonList(isAndroidStreamingUrl
-                                ? getAndroidUserAgent(null) : getIosUserAgent(null)));
+                final var headers = Map.of("User-Agent",
+                        List.of(isAndroidStreamingUrl ? getAndroidUserAgent(null)
+                                : getIosUserAgent(null)));
                 final byte[] emptyBody = "".getBytes(StandardCharsets.UTF_8);
                 return downloader.post(baseStreamingUrl, headers, emptyBody);
             } catch (final IOException | ExtractionException e) {
@@ -706,8 +742,7 @@ public final class YoutubeDashManifestCreatorsUtils {
             @Nonnull final String responseMimeTypeExpected)
             throws CreationException {
         try {
-            final Map<String, List<String>> headers = new HashMap<>();
-            addClientInfoHeaders(headers);
+            final var headers = getClientInfoHeaders();
 
             String responseMimeType = "";
 

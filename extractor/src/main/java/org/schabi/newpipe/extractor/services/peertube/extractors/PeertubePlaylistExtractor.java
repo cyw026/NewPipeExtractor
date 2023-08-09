@@ -12,6 +12,7 @@ import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.linkhandler.ListLinkHandler;
 import org.schabi.newpipe.extractor.playlist.PlaylistExtractor;
 import org.schabi.newpipe.extractor.services.peertube.PeertubeParsingHelper;
+import org.schabi.newpipe.extractor.stream.Description;
 import org.schabi.newpipe.extractor.stream.StreamInfoItem;
 import org.schabi.newpipe.extractor.stream.StreamInfoItemsCollector;
 import org.schabi.newpipe.extractor.utils.Utils;
@@ -22,7 +23,7 @@ import java.io.IOException;
 import static org.schabi.newpipe.extractor.services.peertube.PeertubeParsingHelper.COUNT_KEY;
 import static org.schabi.newpipe.extractor.services.peertube.PeertubeParsingHelper.ITEMS_PER_PAGE;
 import static org.schabi.newpipe.extractor.services.peertube.PeertubeParsingHelper.START_KEY;
-import static org.schabi.newpipe.extractor.services.peertube.PeertubeParsingHelper.collectStreamsFrom;
+import static org.schabi.newpipe.extractor.services.peertube.PeertubeParsingHelper.collectItemsFrom;
 import static org.schabi.newpipe.extractor.utils.Utils.isNullOrEmpty;
 
 public class PeertubePlaylistExtractor extends PlaylistExtractor {
@@ -63,6 +64,16 @@ public class PeertubePlaylistExtractor extends PlaylistExtractor {
     @Override
     public long getStreamCount() {
         return playlistInfo.getLong("videosLength");
+    }
+
+    @Nonnull
+    @Override
+    public Description getDescription() throws ParsingException {
+        final String description = playlistInfo.getString("description");
+        if (isNullOrEmpty(description)) {
+            return Description.EMPTY_DESCRIPTION;
+        }
+        return new Description(description, Description.PLAIN_TEXT);
     }
 
     @Nonnull
@@ -114,7 +125,7 @@ public class PeertubePlaylistExtractor extends PlaylistExtractor {
             final long total = json.getLong("total");
 
             final StreamInfoItemsCollector collector = new StreamInfoItemsCollector(getServiceId());
-            collectStreamsFrom(collector, json, getBaseUrl());
+            collectItemsFrom(collector, json, getBaseUrl());
 
             return new InfoItemsPage<>(collector,
                     PeertubeParsingHelper.getNextPage(page.getUrl(), total));
