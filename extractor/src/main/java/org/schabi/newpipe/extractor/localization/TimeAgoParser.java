@@ -7,14 +7,21 @@ import org.schabi.newpipe.extractor.utils.Parser;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+import java.util.regex.Matcher;
+import java.util.regex.MatchResult;
 
 /**
- * A helper class that is meant to be used by services that need to parse upload dates in the
- * format '2 days ago' or similar.
+ * A helper class that is meant to be used by services that need to parse durations such as
+ * {@code 23 seconds} and/or upload dates in the format {@code 2 days ago} or similar.
  */
 public class TimeAgoParser {
+
+    private static final Pattern DURATION_PATTERN = Pattern.compile("(?:(\\d+) )?([A-z]+)");
+
     private final PatternsHolder patternsHolder;
     private final OffsetDateTime now;
 
@@ -60,6 +67,48 @@ public class TimeAgoParser {
         return getResultFor(parseTimeAgoAmount(textualDate), parseChronoUnit(textualDate));
     }
 
+    /**
+     * Parses a textual duration into a duration computer number.
+     *
+     * @param textualDuration the textual duration to parse
+     * @return the textual duration parsed, as a primitive {@code long}
+     * @throws ParsingException if the textual duration could not be parsed
+     */
+    public long parseDuration(final String textualDuration) throws ParsingException {
+        // We can't use Matcher.results, as it is only available on Android 14 and above
+        final Matcher matcher = DURATION_PATTERN.matcher(textualDuration);
+        final List<MatchResult> results = new ArrayList<>();
+        while (matcher.find()) {
+            results.add(matcher.toMatchResult());
+        }
+
+        return results.stream()
+                .map(match -> {
+                    final String digits = match.group(1);
+                    final String word = match.group(2);
+
+                    int amount;
+                    try {
+                        amount = Integer.parseInt(digits);
+                    } catch (final NumberFormatException ignored) {
+                        amount = 1;
+                    }
+
+                    final ChronoUnit unit;
+                    try {
+                        unit = parseChronoUnit(word);
+                    } catch (final ParsingException ignored) {
+                        return 0L;
+                    }
+
+                    return amount * unit.getDuration().getSeconds();
+                })
+                .filter(n -> n > 0)
+                .reduce(Long::sum)
+                .orElseThrow(() -> new ParsingException(
+                        "Could not parse duration \"" + textualDuration + "\""));
+    }
+
     private int parseTimeAgoAmount(final String textualDate) {
         try {
             return Integer.parseInt(textualDate.replaceAll("\\D+", ""));
@@ -93,7 +142,8 @@ public class TimeAgoParser {
         final String escapedSeparator = patternsHolder.wordSeparator().equals(" ")
                 // From JDK8 → \h - Treat horizontal spaces as a normal one
                 // (non-breaking space, thin space, etc.)
-                ? "[ \\t\\xA0\\u1680\\u180e\\u2000-\\u200a\\u202f\\u205f\\u3000]"
+                // Also split the string on numbers to be able to parse strings like "2wk"
+                ? "[ \\t\\xA0\\u1680\\u180e\\u2000-\\u200a\\u202f\\u205f\\u3000\\d]"
                 : Pattern.quote(patternsHolder.wordSeparator());
 
         // (^|separator)pattern($|separator)

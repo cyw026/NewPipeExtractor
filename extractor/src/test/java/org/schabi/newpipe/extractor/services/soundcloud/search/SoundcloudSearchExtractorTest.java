@@ -1,5 +1,14 @@
 package org.schabi.newpipe.extractor.services.soundcloud.search;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.schabi.newpipe.extractor.ServiceList.SoundCloud;
+import static org.schabi.newpipe.extractor.services.DefaultTests.assertNoDuplicatedItems;
+import static org.schabi.newpipe.extractor.services.soundcloud.linkHandler.SoundcloudSearchQueryHandlerFactory.PLAYLISTS;
+import static org.schabi.newpipe.extractor.services.soundcloud.linkHandler.SoundcloudSearchQueryHandlerFactory.TRACKS;
+import static org.schabi.newpipe.extractor.services.soundcloud.linkHandler.SoundcloudSearchQueryHandlerFactory.USERS;
+import static java.util.Collections.singletonList;
+
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.schabi.newpipe.downloader.DownloaderTestImpl;
@@ -11,19 +20,13 @@ import org.schabi.newpipe.extractor.channel.ChannelInfoItem;
 import org.schabi.newpipe.extractor.exceptions.ExtractionException;
 import org.schabi.newpipe.extractor.search.SearchExtractor;
 import org.schabi.newpipe.extractor.services.DefaultSearchExtractorTest;
+import org.schabi.newpipe.extractor.utils.Utils;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
 import java.util.List;
 
-import static java.util.Collections.singletonList;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.schabi.newpipe.extractor.ServiceList.SoundCloud;
-import static org.schabi.newpipe.extractor.services.DefaultTests.assertNoDuplicatedItems;
-import static org.schabi.newpipe.extractor.services.soundcloud.linkHandler.SoundcloudSearchQueryHandlerFactory.*;
-import static org.schabi.newpipe.extractor.utils.Utils.UTF_8;
+import javax.annotation.Nullable;
 
 public class SoundcloudSearchExtractorTest {
 
@@ -138,7 +141,7 @@ public class SoundcloudSearchExtractorTest {
 
     private static String urlEncode(String value) {
         try {
-            return URLEncoder.encode(value, UTF_8);
+            return Utils.encodeUrlUtf8(value);
         } catch (UnsupportedEncodingException e) {
             throw new RuntimeException(e);
         }
@@ -178,5 +181,28 @@ public class SoundcloudSearchExtractorTest {
             }
             assertTrue(verified);
         }
+    }
+
+    public static class NoNextPage extends DefaultSearchExtractorTest {
+
+        private static SearchExtractor extractor;
+        private static final String QUERY = "Dan at hor#berlgbd";
+
+        @BeforeAll
+        public static void setUp() throws Exception {
+            NewPipe.init(DownloaderTestImpl.getInstance());
+            extractor = SoundCloud.getSearchExtractor(QUERY);
+            extractor.fetchPage();
+        }
+
+        @Override public boolean expectedHasMoreItems() { return false; }
+        @Override public SearchExtractor extractor() throws Exception { return extractor; }
+        @Override public StreamingService expectedService() throws Exception { return SoundCloud; }
+        @Override public String expectedName() throws Exception { return QUERY; }
+        @Override public String expectedId() throws Exception { return QUERY; }
+        @Override public String expectedUrlContains() { return "soundcloud.com/search?q=" + urlEncode(QUERY); }
+        @Override public String expectedOriginalUrlContains() { return "soundcloud.com/search?q=" + urlEncode(QUERY); }
+        @Override public String expectedSearchString() { return QUERY; }
+        @Nullable @Override public String expectedSearchSuggestion() { return null; }
     }
 }

@@ -10,15 +10,29 @@ import java.util.List;
  * Like in {@link BandcampStreamLinkHandlerFactory}, tracks have no meaningful IDs except for
  * their URLs
  */
-public class BandcampCommentsLinkHandlerFactory extends ListLinkHandlerFactory {
+public final class BandcampCommentsLinkHandlerFactory extends ListLinkHandlerFactory {
+
+    private static final BandcampCommentsLinkHandlerFactory INSTANCE
+            = new BandcampCommentsLinkHandlerFactory();
+
+    private BandcampCommentsLinkHandlerFactory() {
+    }
+
+    public static BandcampCommentsLinkHandlerFactory getInstance() {
+        return INSTANCE;
+    }
 
     @Override
-    public String getId(final String url) throws ParsingException {
+    public String getId(final String url) throws ParsingException, UnsupportedOperationException {
         return url;
     }
 
     @Override
     public boolean onAcceptUrl(final String url) throws ParsingException {
+        if (BandcampExtractorHelper.isRadioUrl(url)) {
+            return true;
+        }
+
         // Don't accept URLs that don't point to a track
         if (!url.toLowerCase().matches("https?://.+\\..+/(track|album)/.+")) {
             return false;
@@ -31,7 +45,8 @@ public class BandcampCommentsLinkHandlerFactory extends ListLinkHandlerFactory {
     @Override
     public String getUrl(final String id,
                          final List<String> contentFilter,
-                         final String sortFilter) throws ParsingException {
+                         final String sortFilter)
+            throws ParsingException, UnsupportedOperationException {
         return id;
     }
 }

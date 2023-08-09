@@ -2,10 +2,14 @@ package org.schabi.newpipe.extractor.services.peertube;
 
 import com.grack.nanojson.JsonArray;
 import com.grack.nanojson.JsonObject;
+
+import org.schabi.newpipe.extractor.InfoItemExtractor;
 import org.schabi.newpipe.extractor.InfoItemsCollector;
 import org.schabi.newpipe.extractor.Page;
 import org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
+import org.schabi.newpipe.extractor.services.peertube.extractors.PeertubeChannelInfoItemExtractor;
+import org.schabi.newpipe.extractor.services.peertube.extractors.PeertubePlaylistInfoItemExtractor;
 import org.schabi.newpipe.extractor.services.peertube.extractors.PeertubeSepiaStreamInfoItemExtractor;
 import org.schabi.newpipe.extractor.services.peertube.extractors.PeertubeStreamInfoItemExtractor;
 import org.schabi.newpipe.extractor.utils.JsonUtils;
@@ -68,24 +72,29 @@ public final class PeertubeParsingHelper {
         }
     }
 
-    public static void collectStreamsFrom(final InfoItemsCollector collector,
-                                          final JsonObject json,
-                                          final String baseUrl) throws ParsingException {
-        collectStreamsFrom(collector, json, baseUrl, false);
+    public static void collectItemsFrom(final InfoItemsCollector collector,
+                                        final JsonObject json,
+                                        final String baseUrl) throws ParsingException {
+        collectItemsFrom(collector, json, baseUrl, false);
     }
 
     /**
-     * Collect stream from json with collector
+     * Collect items from the given JSON object with the given collector.
+     *
+     * <p>
+     * Supported info item types are streams with their Sepia variant, channels and playlists.
+     * </p>
      *
      * @param collector the collector used to collect information
-     * @param json      the file to retrieve data from
-     * @param baseUrl   the base Url of the instance
-     * @param sepia     if we should use PeertubeSepiaStreamInfoItemExtractor
+     * @param json      the JSOn response to retrieve data from
+     * @param baseUrl   the base URL of the instance
+     * @param sepia     if we should use {@code PeertubeSepiaStreamInfoItemExtractor} to extract
+     *                  streams or {@code PeertubeStreamInfoItemExtractor} otherwise
      */
-    public static void collectStreamsFrom(final InfoItemsCollector collector,
-                                          final JsonObject json,
-                                          final String baseUrl,
-                                          final boolean sepia) throws ParsingException {
+    public static void collectItemsFrom(final InfoItemsCollector collector,
+                                        final JsonObject json,
+                                        final String baseUrl,
+                                        final boolean sepia) throws ParsingException {
         final JsonArray contents;
         try {
             contents = (JsonArray) JsonUtils.getValue(json, "data");
@@ -101,10 +110,16 @@ public final class PeertubeParsingHelper {
                 if (item.has("video")) {
                     item = item.getObject("video");
                 }
+                final boolean isPlaylistInfoItem = item.has("videosLength");
+                final boolean isChannelInfoItem = item.has("followersCount");
 
-                final PeertubeStreamInfoItemExtractor extractor;
+                final InfoItemExtractor extractor;
                 if (sepia) {
                     extractor = new PeertubeSepiaStreamInfoItemExtractor(item, baseUrl);
+                } else if (isPlaylistInfoItem) {
+                    extractor = new PeertubePlaylistInfoItemExtractor(item, baseUrl);
+                } else if (isChannelInfoItem) {
+                    extractor = new PeertubeChannelInfoItemExtractor(item, baseUrl);
                 } else {
                     extractor = new PeertubeStreamInfoItemExtractor(item, baseUrl);
                 }

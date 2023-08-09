@@ -5,15 +5,19 @@ import org.junit.jupiter.api.Test;
 import org.schabi.newpipe.downloader.DownloaderTestImpl;
 import org.schabi.newpipe.extractor.ExtractorAsserts;
 import org.schabi.newpipe.extractor.NewPipe;
-import org.schabi.newpipe.extractor.channel.ChannelExtractor;
+import org.schabi.newpipe.extractor.channel.tabs.ChannelTabs;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.services.BaseChannelExtractorTest;
 import org.schabi.newpipe.extractor.services.peertube.extractors.PeertubeAccountExtractor;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.schabi.newpipe.extractor.ExtractorAsserts.assertIsSecureUrl;
+import static org.schabi.newpipe.extractor.ExtractorAsserts.assertTabsContain;
 import static org.schabi.newpipe.extractor.ServiceList.PeerTube;
-import static org.schabi.newpipe.extractor.services.DefaultTests.*;
 
 /**
  * Test for {@link PeertubeAccountExtractor}
@@ -63,26 +67,12 @@ public class PeertubeAccountExtractorTest {
         }
 
         /*//////////////////////////////////////////////////////////////////////////
-        // ListExtractor
-        //////////////////////////////////////////////////////////////////////////*/
-
-        @Test
-        public void testRelatedItems() throws Exception {
-            defaultTestRelatedItems(extractor);
-        }
-
-        @Test
-        public void testMoreRelatedItems() throws Exception {
-            defaultTestMoreItems(extractor);
-        }
-
-        /*//////////////////////////////////////////////////////////////////////////
         // ChannelExtractor
         //////////////////////////////////////////////////////////////////////////*/
 
         @Test
         public void testDescription() throws ParsingException {
-            assertNotNull(extractor.getDescription());
+            assertNull(extractor.getDescription());
         }
 
         @Test
@@ -109,6 +99,18 @@ public class PeertubeAccountExtractorTest {
         public void testVerified() throws Exception {
             assertFalse(extractor.isVerified());
         }
+
+        @Test
+        @Override
+        public void testTabs() throws Exception {
+            assertTabsContain(extractor.getTabs(), ChannelTabs.VIDEOS, ChannelTabs.CHANNELS);
+        }
+
+        @Test
+        @Override
+        public void testTags() throws Exception {
+            assertTrue(extractor.getTags().isEmpty());
+        }
     }
 
     public static class FreeSoftwareFoundation implements BaseChannelExtractorTest {
@@ -122,16 +124,6 @@ public class PeertubeAccountExtractorTest {
             extractor = (PeertubeAccountExtractor) PeerTube
                     .getChannelExtractor("https://framatube.org/api/v1/accounts/fsf");
             extractor.fetchPage();
-        }
-
-        /*//////////////////////////////////////////////////////////////////////////
-        // Additional Testing
-        //////////////////////////////////////////////////////////////////////////*/
-
-        @Test
-        public void testGetPageInNewExtractor() throws Exception {
-            final ChannelExtractor newExtractor = PeerTube.getChannelExtractor(extractor.getUrl());
-            defaultTestGetPageInNewExtractor(extractor, newExtractor);
         }
 
         /*//////////////////////////////////////////////////////////////////////////
@@ -161,20 +153,6 @@ public class PeertubeAccountExtractorTest {
         @Test
         public void testOriginalUrl() throws ParsingException {
             assertEquals("https://framatube.org/api/v1/accounts/fsf", extractor.getOriginalUrl());
-        }
-
-        /*//////////////////////////////////////////////////////////////////////////
-        // ListExtractor
-        //////////////////////////////////////////////////////////////////////////*/
-
-        @Test
-        public void testRelatedItems() throws Exception {
-            defaultTestRelatedItems(extractor);
-        }
-
-        @Test
-        public void testMoreRelatedItems() throws Exception {
-            defaultTestMoreItems(extractor);
         }
 
         /*//////////////////////////////////////////////////////////////////////////
@@ -209,6 +187,18 @@ public class PeertubeAccountExtractorTest {
         @Override
         public void testVerified() throws Exception {
             assertFalse(extractor.isVerified());
+        }
+
+        @Test
+        @Override
+        public void testTabs() throws Exception {
+            assertTabsContain(extractor.getTabs(), ChannelTabs.VIDEOS, ChannelTabs.CHANNELS);
+        }
+
+        @Test
+        @Override
+        public void testTags() throws Exception {
+            assertTrue(extractor.getTags().isEmpty());
         }
     }
 }
