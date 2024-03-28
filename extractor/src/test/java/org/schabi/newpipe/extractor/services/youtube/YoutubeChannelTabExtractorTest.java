@@ -68,28 +68,6 @@ class YoutubeChannelTabExtractorTest {
         @Override public boolean expectedHasMoreItems() { return true; }
     }
 
-    static class Channels extends DefaultListExtractorTest<ChannelTabExtractor> {
-        private static YoutubeChannelTabExtractor extractor;
-
-        @BeforeAll
-        static void setUp() throws IOException, ExtractionException {
-            YoutubeTestsUtils.ensureStateless();
-            NewPipe.init(DownloaderFactory.getDownloader(RESOURCE_PATH + "channels"));
-            extractor = (YoutubeChannelTabExtractor) YouTube.getChannelTabExtractorFromId(
-                    "channel/UC2DjFE7Xf11URZqWBigcVOQ", ChannelTabs.CHANNELS);
-            extractor.fetchPage();
-        }
-
-        @Override public ChannelTabExtractor extractor() throws Exception { return extractor; }
-        @Override public StreamingService expectedService() throws Exception { return YouTube; }
-        @Override public String expectedName() throws Exception { return ChannelTabs.CHANNELS; }
-        @Override public String expectedId() throws Exception { return "UC2DjFE7Xf11URZqWBigcVOQ"; }
-        @Override public String expectedUrlContains() throws Exception { return "https://www.youtube.com/channel/UC2DjFE7Xf11URZqWBigcVOQ/channels"; }
-        @Override public String expectedOriginalUrlContains() throws Exception { return "https://www.youtube.com/channel/UC2DjFE7Xf11URZqWBigcVOQ/channels"; }
-        @Override public InfoItem.InfoType expectedInfoItemType() { return InfoItem.InfoType.CHANNEL; }
-        @Override public boolean expectedHasMoreItems() { return true; }
-    }
-
     static class Livestreams extends DefaultListExtractorTest<ChannelTabExtractor> {
         private static YoutubeChannelTabExtractor extractor;
 
@@ -131,6 +109,28 @@ class YoutubeChannelTabExtractorTest {
         @Override public String expectedUrlContains() throws Exception { return "https://www.youtube.com/channel/UCh8gHdtzO2tXd593_bjErWg/shorts"; }
         @Override public String expectedOriginalUrlContains() throws Exception { return "https://www.youtube.com/channel/UCh8gHdtzO2tXd593_bjErWg/shorts"; }
         @Override public InfoItem.InfoType expectedInfoItemType() { return InfoItem.InfoType.STREAM; }
+        @Override public boolean expectedHasMoreItems() { return true; }
+    }
+
+    static class Albums extends DefaultListExtractorTest<ChannelTabExtractor> {
+        private static YoutubeChannelTabExtractor extractor;
+
+        @BeforeAll
+        static void setUp() throws IOException, ExtractionException {
+            YoutubeTestsUtils.ensureStateless();
+            NewPipe.init(DownloaderFactory.getDownloader(RESOURCE_PATH + "albums"));
+            extractor = (YoutubeChannelTabExtractor) YouTube.getChannelTabExtractorFromId(
+                    "@Radiohead", ChannelTabs.ALBUMS);
+            extractor.fetchPage();
+        }
+
+        @Override public ChannelTabExtractor extractor() throws Exception { return extractor; }
+        @Override public StreamingService expectedService() throws Exception { return YouTube; }
+        @Override public String expectedName() throws Exception { return ChannelTabs.ALBUMS; }
+        @Override public String expectedId() throws Exception { return "UCq19-LqvG35A-30oyAiPiqA"; }
+        @Override public String expectedUrlContains() throws Exception { return "https://www.youtube.com/channel/UCq19-LqvG35A-30oyAiPiqA/releases"; }
+        @Override public String expectedOriginalUrlContains() throws Exception { return "https://www.youtube.com/@Radiohead/releases"; }
+        @Override public InfoItem.InfoType expectedInfoItemType() { return InfoItem.InfoType.PLAYLIST; }
         @Override public boolean expectedHasMoreItems() { return true; }
     }
 
