@@ -1,3 +1,23 @@
+/*
+ * Created by Christian Schabesberger on 25.07.16.
+ *
+ * Copyright (C) 2018 Christian Schabesberger <chris.schabesberger@mailbox.org>
+ * YoutubeChannelExtractor.java is part of NewPipe Extractor.
+ *
+ * NewPipe Extractor is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * NewPipe Extractor is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with NewPipe Extractor.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package org.schabi.newpipe.extractor.services.youtube.extractors;
 
 import static org.schabi.newpipe.extractor.services.youtube.YoutubeChannelHelper.getChannelResponse;
@@ -8,6 +28,7 @@ import static org.schabi.newpipe.extractor.utils.Utils.isNullOrEmpty;
 import com.grack.nanojson.JsonArray;
 import com.grack.nanojson.JsonObject;
 
+import org.schabi.newpipe.extractor.Image;
 import org.schabi.newpipe.extractor.StreamingService;
 import org.schabi.newpipe.extractor.channel.ChannelExtractor;
 import org.schabi.newpipe.extractor.channel.tabs.ChannelTabs;
@@ -17,6 +38,8 @@ import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.linkhandler.ListLinkHandler;
 import org.schabi.newpipe.extractor.linkhandler.ReadyChannelTabListLinkHandler;
 import org.schabi.newpipe.extractor.services.youtube.YoutubeChannelHelper;
+import org.schabi.newpipe.extractor.services.youtube.YoutubeChannelHelper.ChannelHeader;
+import org.schabi.newpipe.extractor.services.youtube.YoutubeChannelHelper.ChannelHeader.HeaderType;
 import org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper;
 import org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeChannelTabExtractor.VideosTabExtractor;
 import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeChannelLinkHandlerFactory;
@@ -34,32 +57,12 @@ import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-/*
- * Created by Christian Schabesberger on 25.07.16.
- *
- * Copyright (C) Christian Schabesberger 2018 <chris.schabesberger@mailbox.org>
- * YoutubeChannelExtractor.java is part of NewPipe.
- *
- * NewPipe is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * NewPipe is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with NewPipe.  If not, see <http://www.gnu.org/licenses/>.
- */
-
 public class YoutubeChannelExtractor extends ChannelExtractor {
 
     private JsonObject jsonResponse;
 
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-    private Optional<YoutubeChannelHelper.ChannelHeader> channelHeader;
+    private Optional<ChannelHeader> channelHeader;
 
     private String channelId;
 
@@ -117,11 +120,6 @@ public class YoutubeChannelExtractor extends ChannelExtractor {
     }
 
     @Nonnull
-    private Optional<JsonObject> getChannelHeaderJson() {
-        return channelHeader.map(it -> it.json);
-    }
-
-    @Nonnull
     @Override
     public String getUrl() throws ParsingException {
         try {
@@ -134,7 +132,8 @@ public class YoutubeChannelExtractor extends ChannelExtractor {
     @Nonnull
     @Override
     public String getId() throws ParsingException {
-        return getChannelHeaderJson()
+        assertPageFetched();
+        return channelHeader.map(header -> header.json)
                 .flatMap(header -> Optional.ofNullable(header.getString("channelId"))
                         .or(() -> Optional.ofNullable(header.getObject("navigationEndpoint")
                                 .getObject("browseEndpoint")
@@ -147,8 +146,13 @@ public class YoutubeChannelExtractor extends ChannelExtractor {
     @Nonnull
     @Override
     public String getName() throws ParsingException {
+        assertPageFetched();
         if (channelAgeGateRenderer != null) {
-            return channelAgeGateRenderer.getString("channelTitle");
+            final String title = channelAgeGateRenderer.getString("channelTitle");
+            if (isNullOrEmpty(title)) {
+                throw new ParsingException("Could not get channel name");
+            }
+            return title;
         }
 
         final String metadataRendererTitle = jsonResponse.getObject("metadata")
@@ -158,53 +162,85 @@ public class YoutubeChannelExtractor extends ChannelExtractor {
             return metadataRendererTitle;
         }
 
-        return getChannelHeaderJson().flatMap(header -> {
-            final Object title = header.get("title");
-            if (title instanceof String) {
-                return Optional.of((String) title);
-            } else if (title instanceof JsonObject) {
-                final String headerName = getTextFromObject((JsonObject) title);
-                if (!isNullOrEmpty(headerName)) {
-                    return Optional.of(headerName);
-                }
+        return channelHeader.map(header -> {
+            final JsonObject channelJson = header.json;
+            switch (header.headerType) {
+                case PAGE:
+                    return channelJson.getObject("content")
+                            .getObject("pageHeaderViewModel")
+                            .getObject("title")
+                            .getObject("dynamicTextViewModel")
+                            .getObject("text")
+                            .getString("content", channelJson.getString("pageTitle"));
+
+                case CAROUSEL:
+                case INTERACTIVE_TABBED:
+                    return getTextFromObject(channelJson.getObject("title"));
+
+                case C4_TABBED:
+                default:
+                    return channelJson.getString("title");
             }
-            return Optional.empty();
-        }).orElseThrow(() -> new ParsingException("Could not get channel name"));
+        })
+        // The channel name from a microformatDataRenderer may be different from the one displayed,
+        // especially for auto-generated channels, depending on the language requested for the
+        // interface (hl parameter of InnerTube requests' payload)
+        .or(() -> Optional.ofNullable(jsonResponse.getObject("microformat")
+                .getObject("microformatDataRenderer")
+                .getString("title")))
+        .orElseThrow(() -> new ParsingException("Could not get channel name"));
     }
 
+    @Nonnull
     @Override
-    public String getAvatarUrl() throws ParsingException {
-        final JsonObject avatarJsonObjectContainer;
+    public List<Image> getAvatars() throws ParsingException {
+        assertPageFetched();
         if (channelAgeGateRenderer != null) {
-            avatarJsonObjectContainer = channelAgeGateRenderer;
-        } else {
-            avatarJsonObjectContainer = getChannelHeaderJson()
-                    .orElseThrow(() -> new ParsingException("Could not get avatar URL"));
+            return Optional.ofNullable(channelAgeGateRenderer.getObject("avatar")
+                    .getArray("thumbnails"))
+                    .map(YoutubeParsingHelper::getImagesFromThumbnailsArray)
+                    .orElseThrow(() -> new ParsingException("Could not get avatars"));
         }
 
-        return YoutubeParsingHelper.fixThumbnailUrl(avatarJsonObjectContainer.getObject("avatar")
-                .getArray("thumbnails")
-                .getObject(0)
-                .getString("url"));
+        return channelHeader.map(header -> {
+            switch (header.headerType) {
+                case PAGE:
+                    return header.json.getObject("content")
+                            .getObject("pageHeaderViewModel")
+                            .getObject("image")
+                            .getObject("contentPreviewImageViewModel")
+                            .getObject("image")
+                            .getArray("sources");
+
+                case INTERACTIVE_TABBED:
+                    return header.json.getObject("boxArt")
+                            .getArray("thumbnails");
+
+                case C4_TABBED:
+                case CAROUSEL:
+                default:
+                    return header.json.getObject("avatar")
+                            .getArray("thumbnails");
+            }
+        })
+                .map(YoutubeParsingHelper::getImagesFromThumbnailsArray)
+                .orElseThrow(() -> new ParsingException("Could not get avatars"));
     }
 
+    @Nonnull
     @Override
-    public String getBannerUrl() throws ParsingException {
+    public List<Image> getBanners() {
+        assertPageFetched();
         if (channelAgeGateRenderer != null) {
-            return "";
+            return List.of();
         }
 
-        return getChannelHeaderJson().flatMap(header -> Optional.ofNullable(
-                        header.getObject("banner")
-                                .getArray("thumbnails")
-                                .getObject(0)
-                                .getString("url")))
-                .filter(url -> !url.contains("s.ytimg.com") && !url.contains("default_banner"))
-                .map(YoutubeParsingHelper::fixThumbnailUrl)
-                // Channels may not have a banner, so no exception should be thrown if no banner is
-                // found
-                // Return null in this case
-                .orElse(null);
+        // No banner is available on pageHeaderRenderer headers
+        return channelHeader.filter(header -> header.headerType != HeaderType.PAGE)
+                .map(header -> header.json.getObject("banner")
+                        .getArray("thumbnails"))
+                .map(YoutubeParsingHelper::getImagesFromThumbnailsArray)
+                .orElse(List.of());
     }
 
     @Override
@@ -214,25 +250,34 @@ public class YoutubeChannelExtractor extends ChannelExtractor {
         try {
             return YoutubeParsingHelper.getFeedUrlFrom(getId());
         } catch (final Exception e) {
-            throw new ParsingException("Could not get feed url", e);
+            throw new ParsingException("Could not get feed URL", e);
         }
     }
 
     @Override
     public long getSubscriberCount() throws ParsingException {
+        assertPageFetched();
         if (channelAgeGateRenderer != null) {
             return UNKNOWN_SUBSCRIBER_COUNT;
         }
 
-        final Optional<JsonObject> headerOpt = getChannelHeaderJson();
-        if (headerOpt.isPresent()) {
-            final JsonObject header = headerOpt.get();
+        if (channelHeader.isPresent()) {
+            final ChannelHeader header = channelHeader.get();
+
+            if (header.headerType == HeaderType.INTERACTIVE_TABBED
+                    || header.headerType == HeaderType.PAGE) {
+                // No subscriber count is available on interactiveTabbedHeaderRenderer and
+                // pageHeaderRenderer headers
+                return UNKNOWN_SUBSCRIBER_COUNT;
+            }
+
+            final JsonObject headerJson = header.json;
             JsonObject textObject = null;
 
-            if (header.has("subscriberCountText")) {
-                textObject = header.getObject("subscriberCountText");
-            } else if (header.has("subtitle")) {
-                textObject = header.getObject("subtitle");
+            if (headerJson.has("subscriberCountText")) {
+                textObject = headerJson.getObject("subscriberCountText");
+            } else if (headerJson.has("subtitle")) {
+                textObject = headerJson.getObject("subtitle");
             }
 
             if (textObject != null) {
@@ -249,11 +294,34 @@ public class YoutubeChannelExtractor extends ChannelExtractor {
 
     @Override
     public String getDescription() throws ParsingException {
+        assertPageFetched();
         if (channelAgeGateRenderer != null) {
             return null;
         }
 
         try {
+            if (channelHeader.isPresent()) {
+                final ChannelHeader header = channelHeader.get();
+
+                if (header.headerType == HeaderType.PAGE) {
+                    // A pageHeaderRenderer doesn't contain a description
+                    return null;
+                }
+
+                if (header.headerType == HeaderType.INTERACTIVE_TABBED) {
+                    /*
+                    In an interactiveTabbedHeaderRenderer, the real description, is only available
+                    in its header
+                    The other one returned in non-About tabs accessible in the
+                    microformatDataRenderer object of the response may be completely different
+                    The description extracted is incomplete and the original one can be only
+                    accessed from the About tab
+                     */
+                    return getTextFromObject(header.json.getObject("description"));
+                }
+            }
+
+            // The description is cut and the original one can be only accessed from the About tab
             return jsonResponse.getObject("metadata")
                     .getObject("channelMetadataRenderer")
                     .getString("description");
@@ -272,34 +340,47 @@ public class YoutubeChannelExtractor extends ChannelExtractor {
         return "";
     }
 
+    @Nonnull
     @Override
-    public String getParentChannelAvatarUrl() {
-        return "";
+    public List<Image> getParentChannelAvatars() {
+        return List.of();
     }
 
     @Override
     public boolean isVerified() throws ParsingException {
+        assertPageFetched();
         if (channelAgeGateRenderer != null) {
             return false;
         }
 
         if (channelHeader.isPresent()) {
-            final YoutubeChannelHelper.ChannelHeader header = channelHeader.get();
+            final ChannelHeader header = channelHeader.get();
 
-            // The CarouselHeaderRenderer does not contain any verification badges.
-            // Since it is only shown on YT-internal channels or on channels of large organizations
-            // broadcasting live events, we can assume the channel to be verified.
-            if (header.isCarouselHeader) {
+            // carouselHeaderRenderer and pageHeaderRenderer does not contain any verification
+            // badges
+            // Since they are only shown on YouTube internal channels or on channels of large
+            // organizations broadcasting live events, we can assume the channel to be verified
+            if (header.headerType == HeaderType.CAROUSEL || header.headerType == HeaderType.PAGE) {
                 return true;
             }
+
+            if (header.headerType == HeaderType.INTERACTIVE_TABBED) {
+                // If the header has an autoGenerated property, it should mean that the channel has
+                // been auto generated by YouTube: we can assume the channel to be verified in this
+                // case
+                return header.json.has("autoGenerated");
+            }
+
             return YoutubeParsingHelper.isVerified(header.json.getArray("badges"));
         }
+
         return false;
     }
 
     @Nonnull
     @Override
     public List<ListLinkHandler> getTabs() throws ParsingException {
+        assertPageFetched();
         if (channelAgeGateRenderer == null) {
             return getTabsForNonAgeRestrictedChannels();
         }
@@ -364,11 +445,11 @@ public class YoutubeChannelExtractor extends ChannelExtractor {
                             case "streams":
                                 addNonVideosTab.accept(ChannelTabs.LIVESTREAMS);
                                 break;
+                            case "releases":
+                                addNonVideosTab.accept(ChannelTabs.ALBUMS);
+                                break;
                             case "playlists":
                                 addNonVideosTab.accept(ChannelTabs.PLAYLISTS);
-                                break;
-                            case "channels":
-                                addNonVideosTab.accept(ChannelTabs.CHANNELS);
                                 break;
                         }
                     }
@@ -401,6 +482,7 @@ public class YoutubeChannelExtractor extends ChannelExtractor {
     @Nonnull
     @Override
     public List<String> getTags() throws ParsingException {
+        assertPageFetched();
         if (channelAgeGateRenderer != null) {
             return List.of();
         }

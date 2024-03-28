@@ -1,7 +1,7 @@
 /*
  * Created by Christian Schabesberger on 02.03.16.
  *
- * Copyright (C) Christian Schabesberger 2016 <chris.schabesberger@mailbox.org>
+ * Copyright (C) 2016 Christian Schabesberger <chris.schabesberger@mailbox.org>
  * YoutubeParsingHelper.java is part of NewPipe Extractor.
  *
  * NewPipe Extractor is free software: you can redistribute it and/or modify
@@ -32,8 +32,10 @@ import com.grack.nanojson.JsonObject;
 import com.grack.nanojson.JsonParser;
 import com.grack.nanojson.JsonParserException;
 import com.grack.nanojson.JsonWriter;
+
 import org.jsoup.nodes.Entities;
-import org.schabi.newpipe.extractor.MetaInfo;
+import org.schabi.newpipe.extractor.Image;
+import org.schabi.newpipe.extractor.Image.ResolutionLevel;
 import org.schabi.newpipe.extractor.downloader.Response;
 import org.schabi.newpipe.extractor.exceptions.AccountTerminatedException;
 import org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException;
@@ -44,7 +46,6 @@ import org.schabi.newpipe.extractor.localization.ContentCountry;
 import org.schabi.newpipe.extractor.localization.Localization;
 import org.schabi.newpipe.extractor.playlist.PlaylistInfo;
 import org.schabi.newpipe.extractor.stream.AudioTrackType;
-import org.schabi.newpipe.extractor.stream.Description;
 import org.schabi.newpipe.extractor.utils.JsonUtils;
 import org.schabi.newpipe.extractor.utils.Parser;
 import org.schabi.newpipe.extractor.utils.RandomStringFromAlphabetGenerator;
@@ -59,16 +60,15 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.annotation.Nonnull;
@@ -148,7 +148,7 @@ public final class YoutubeParsingHelper {
      * The client version for InnerTube requests with the {@code WEB} client, used as the last
      * fallback if the extraction of the real one failed.
      */
-    private static final String HARDCODED_CLIENT_VERSION = "2.20220809.02.00";
+    private static final String HARDCODED_CLIENT_VERSION = "2.20231208.01.00";
 
     /**
      * The InnerTube API key which should be used by YouTube's desktop website, used as a fallback
@@ -165,7 +165,7 @@ public final class YoutubeParsingHelper {
      * such as <a href="https://www.apkmirror.com/apk/google-inc/youtube/">APKMirror</a>.
      * </p>
      */
-    private static final String ANDROID_YOUTUBE_CLIENT_VERSION = "17.31.35";
+    private static final String ANDROID_YOUTUBE_CLIENT_VERSION = "18.48.37";
 
     /**
      * The InnerTube API key used by the {@code ANDROID} client. Found with the help of
@@ -183,7 +183,7 @@ public final class YoutubeParsingHelper {
      * Store page of the YouTube app</a>, in the {@code What’s New} section.
      * </p>
      */
-    private static final String IOS_YOUTUBE_CLIENT_VERSION = "17.31.4";
+    private static final String IOS_YOUTUBE_CLIENT_VERSION = "18.48.3";
 
     /**
      * The InnerTube API key used by the {@code iOS} client. Found with the help of
@@ -200,7 +200,7 @@ public final class YoutubeParsingHelper {
     private static String key;
 
     private static final String[] HARDCODED_YOUTUBE_MUSIC_KEY =
-            {"AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30", "67", "1.20220808.01.00"};
+            {"AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30", "67", "1.20231204.01.00"};
     private static String[] youtubeMusicKey;
 
     private static boolean keyAndVersionExtracted = false;
@@ -224,14 +224,14 @@ public final class YoutubeParsingHelper {
             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
     /**
-     * The device machine id for the iPhone 13, used to get 60fps with the {@code iOS} client.
+     * The device machine id for the iPhone 15, used to get 60fps with the {@code iOS} client.
      *
      * <p>
      * See <a href="https://gist.github.com/adamawolf/3048717">this GitHub Gist</a> for more
      * information.
      * </p>
      */
-    private static final String IOS_DEVICE_MODEL = "iPhone14,5";
+    private static final String IOS_DEVICE_MODEL = "iPhone15,4";
 
     private static Random numberGenerator = new Random();
 
@@ -256,24 +256,9 @@ public final class YoutubeParsingHelper {
     private static final Set<String> YOUTUBE_URLS = Set.of("youtube.com", "www.youtube.com",
             "m.youtube.com", "music.youtube.com");
 
-    /**
-     * Determines how the consent cookie (that is required for YouTube) will be generated.
-     *
-     * <p>
-     * {@code false} (default) will use {@code PENDING+}.
-     * {@code true} will use {@code YES+}.
-     * </p>
-     *
-     * <p>
-     * Setting this value to <code>true</code> is currently needed if you want to watch
-     * Mix Playlists in some countries (EU).
-     * </p>
-     *
-     * @see #generateConsentCookie()
-     */
     private static boolean consentAccepted = false;
 
-    private static boolean isGoogleURL(final String url) {
+    public static boolean isGoogleURL(final String url) {
         final String cachedUrl = extractCachedUrlIfNeeded(url);
         try {
             final URL u = new URL(cachedUrl);
@@ -547,12 +532,21 @@ public final class YoutubeParsingHelper {
                         .value("gl", "GB")
                         .value("clientName", "WEB")
                         .value("clientVersion", HARDCODED_CLIENT_VERSION)
+                        .value("platform", "DESKTOP")
+                        .value("utcOffsetMinutes", 0)
                     .end()
-                .object("user")
-                    .value("lockedSafetyMode", false)
+                    .object("request")
+                        .array("internalExperimentFlags")
+                        .end()
+                        .value("useSsl", true)
+                    .end()
+                    .object("user")
+                        // TODO: provide a way to enable restricted mode with:
+                        //  .value("enableSafetyMode", boolean)
+                        .value("lockedSafetyMode", false)
+                    .end()
                 .end()
                 .value("fetchLiveState", true)
-                .end()
             .end().done().getBytes(StandardCharsets.UTF_8);
         // @formatter:on
 
@@ -766,7 +760,7 @@ public final class YoutubeParsingHelper {
     public static boolean isHardcodedYoutubeMusicKeyValid() throws IOException,
             ReCaptchaException {
         final String url =
-                "https://music.youtube.com/youtubei/v1/music/get_search_suggestions?alt=json&key="
+                "https://music.youtube.com/youtubei/v1/music/get_search_suggestions?key="
                         + HARDCODED_YOUTUBE_MUSIC_KEY[0] + DISABLE_PRETTY_PRINT_PARAMETER;
 
         // @formatter:off
@@ -778,19 +772,18 @@ public final class YoutubeParsingHelper {
                         .value("clientVersion", HARDCODED_YOUTUBE_MUSIC_KEY[2])
                         .value("hl", "en-GB")
                         .value("gl", "GB")
-                        .array("experimentIds").end()
-                        .value("experimentsToken", "")
-                        .object("locationInfo").end()
-                        .object("musicAppInfo").end()
+                        .value("platform", "DESKTOP")
+                        .value("utcOffsetMinutes", 0)
                     .end()
-                    .object("capabilities").end()
                     .object("request")
-                        .array("internalExperimentFlags").end()
-                        .object("sessionIndex").end()
+                        .array("internalExperimentFlags")
+                        .end()
+                        .value("useSsl", true)
                     .end()
-                    .object("activePlayers").end()
                     .object("user")
-                        .value("enableSafetyMode", false)
+                        // TODO: provide a way to enable restricted mode with:
+                        //  .value("enableSafetyMode", boolean)
+                        .value("lockedSafetyMode", false)
                     .end()
                 .end()
                 .value("input", "")
@@ -1083,6 +1076,16 @@ public final class YoutubeParsingHelper {
                 .replaceAll(" {2}", " &nbsp;");
     }
 
+    @Nonnull
+    public static String getTextFromObjectOrThrow(final JsonObject textObject, final String error)
+            throws ParsingException {
+        final String result = getTextFromObject(textObject);
+        if (result == null) {
+            throw new ParsingException("Could not extract text: " + error);
+        }
+        return result;
+    }
+
     @Nullable
     public static String getTextFromObject(final JsonObject textObject) {
         return getTextFromObject(textObject, false);
@@ -1133,15 +1136,59 @@ public final class YoutubeParsingHelper {
         return result;
     }
 
-    public static String getThumbnailUrlFromInfoItem(final JsonObject infoItem)
+    /**
+     * Get thumbnails from a {@link JsonObject} representing a YouTube
+     * {@link org.schabi.newpipe.extractor.InfoItem InfoItem}.
+     *
+     * <p>
+     * Thumbnails are got from the {@code thumbnails} {@link JsonArray} inside the {@code thumbnail}
+     * {@link JsonObject} of the YouTube {@link org.schabi.newpipe.extractor.InfoItem InfoItem},
+     * using {@link #getImagesFromThumbnailsArray(JsonArray)}.
+     * </p>
+     *
+     * @param infoItem a YouTube {@link org.schabi.newpipe.extractor.InfoItem InfoItem}
+     * @return an unmodifiable list of {@link Image}s found in the {@code thumbnails}
+     * {@link JsonArray}
+     * @throws ParsingException if an exception occurs when
+     *                          {@link #getImagesFromThumbnailsArray(JsonArray)} is executed
+     */
+    @Nonnull
+    public static List<Image> getThumbnailsFromInfoItem(@Nonnull final JsonObject infoItem)
             throws ParsingException {
-        // TODO: Don't simply get the first item, but look at all thumbnails and their resolution
         try {
-            return fixThumbnailUrl(infoItem.getObject("thumbnail").getArray("thumbnails")
-                    .getObject(0).getString("url"));
+            return getImagesFromThumbnailsArray(infoItem.getObject("thumbnail")
+                    .getArray("thumbnails"));
         } catch (final Exception e) {
-            throw new ParsingException("Could not get thumbnail url", e);
+            throw new ParsingException("Could not get thumbnails from InfoItem", e);
         }
+    }
+
+    /**
+     * Get images from a YouTube {@code thumbnails} {@link JsonArray}.
+     *
+     * <p>
+     * The properties of the {@link Image}s created will be set using the corresponding ones of
+     * thumbnail items.
+     * </p>
+     *
+     * @param thumbnails a YouTube {@code thumbnails} {@link JsonArray}
+     * @return an unmodifiable list of {@link Image}s extracted from the given {@link JsonArray}
+     */
+    @Nonnull
+    public static List<Image> getImagesFromThumbnailsArray(
+            @Nonnull final JsonArray thumbnails) {
+        return thumbnails.stream()
+                .filter(JsonObject.class::isInstance)
+                .map(JsonObject.class::cast)
+                .filter(thumbnail -> !isNullOrEmpty(thumbnail.getString("url")))
+                .map(thumbnail -> {
+                    final int height = thumbnail.getInt("height", Image.HEIGHT_UNKNOWN);
+                    return new Image(fixThumbnailUrl(thumbnail.getString("url")),
+                            height,
+                            thumbnail.getInt("width", Image.WIDTH_UNKNOWN),
+                            ResolutionLevel.fromHeight(height));
+                })
+                .collect(Collectors.toUnmodifiableList());
     }
 
     @Nonnull
@@ -1248,7 +1295,8 @@ public final class YoutubeParsingHelper {
                         .value("clientName", "WEB")
                         .value("clientVersion", getClientVersion())
                         .value("originalUrl", "https://www.youtube.com")
-                        .value("platform", "DESKTOP");
+                        .value("platform", "DESKTOP")
+                        .value("utcOffsetMinutes", 0);
 
         if (visitorData != null) {
             builder.value("visitorData", visitorData);
@@ -1261,8 +1309,8 @@ public final class YoutubeParsingHelper {
                         .value("useSsl", true)
                     .end()
                     .object("user")
-                        // TO DO: provide a way to enable restricted mode with:
-                        // .value("enableSafetyMode", boolean)
+                        // TODO: provide a way to enable restricted mode with:
+                        //  .value("enableSafetyMode", boolean)
                         .value("lockedSafetyMode", false)
                     .end()
                 .end();
@@ -1281,25 +1329,31 @@ public final class YoutubeParsingHelper {
                         .value("clientVersion", ANDROID_YOUTUBE_CLIENT_VERSION)
                         .value("platform", "MOBILE")
                         .value("osName", "Android")
-                        .value("osVersion", "12")
+                        .value("osVersion", "14")
                         /*
                         A valid Android SDK version is required to be sure to get a valid player
                         response
-                        If this parameter is not provided, the player response may be replaced by
-                        the one of a 5-minute video saying the message "The following content is
-                        not available on this app. Watch this content on the latest version on
-                        YouTube"
+                        If this parameter is not provided, the player response is replaced by an
+                        error saying the message "The following content is not available on this
+                        app. Watch this content on the latest version on YouTube" (it was
+                        previously a 5-minute video with this message)
                         See https://github.com/TeamNewPipe/NewPipe/issues/8713
                         The Android SDK version corresponding to the Android version used in
                         requests is sent
                         */
-                        .value("androidSdkVersion", 31)
+                        .value("androidSdkVersion", 34)
                         .value("hl", localization.getLocalizationCode())
                         .value("gl", contentCountry.getCountryCode())
+                        .value("utcOffsetMinutes", 0)
+                    .end()
+                    .object("request")
+                        .array("internalExperimentFlags")
+                        .end()
+                        .value("useSsl", true)
                     .end()
                     .object("user")
-                        // TO DO: provide a way to enable restricted mode with:
-                        // .value("enableSafetyMode", boolean)
+                        // TODO: provide a way to enable restricted mode with:
+                        //  .value("enableSafetyMode", boolean)
                         .value("lockedSafetyMode", false)
                     .end()
                 .end();
@@ -1321,17 +1375,26 @@ public final class YoutubeParsingHelper {
                         .value("deviceModel", IOS_DEVICE_MODEL)
                         .value("platform", "MOBILE")
                         .value("osName", "iOS")
-                        // The value of this field seems to use the following structure:
-                        // "iOS version.0.build version"
-                        // The build version corresponding to the iOS version used can be found on
-                        // https://www.theiphonewiki.com/wiki/Firmware/iPhone/15.x#iPhone_13
-                        .value("osVersion", "15.6.0.19G71")
+                        /*
+                        The value of this field seems to use the following structure:
+                        "iOS major version.minor version.patch version.build version", where
+                        "patch version" is equal to 0 if it isn't set
+                        The build version corresponding to the iOS version used can be found on
+                        https://theapplewiki.com/wiki/Firmware/iPhone/17.x#iPhone_15
+                         */
+                        .value("osVersion", "17.1.2.21B101")
                         .value("hl", localization.getLocalizationCode())
                         .value("gl", contentCountry.getCountryCode())
+                        .value("utcOffsetMinutes", 0)
+                    .end()
+                    .object("request")
+                        .array("internalExperimentFlags")
+                        .end()
+                        .value("useSsl", true)
                     .end()
                     .object("user")
-                        // TO DO: provide a way to enable restricted mode with:
-                        // .value("enableSafetyMode", boolean)
+                        // TODO: provide a way to enable restricted mode with:
+                        //  .value("enableSafetyMode", boolean)
                         .value("lockedSafetyMode", false)
                     .end()
                 .end();
@@ -1353,13 +1416,19 @@ public final class YoutubeParsingHelper {
                         .value("platform", "TV")
                         .value("hl", localization.getLocalizationCode())
                         .value("gl", contentCountry.getCountryCode())
+                        .value("utcOffsetMinutes", 0)
                     .end()
                     .object("thirdParty")
                         .value("embedUrl", "https://www.youtube.com/watch?v=" + videoId)
                     .end()
+                    .object("request")
+                        .array("internalExperimentFlags")
+                        .end()
+                        .value("useSsl", true)
+                    .end()
                     .object("user")
-                        // TO DO: provide a way to enable restricted mode with:
-                        // .value("enableSafetyMode", boolean)
+                        // TODO: provide a way to enable restricted mode with:
+                        //  .value("enableSafetyMode", boolean)
                         .value("lockedSafetyMode", false)
                     .end()
                 .end();
@@ -1371,7 +1440,7 @@ public final class YoutubeParsingHelper {
             @Nonnull final Localization localization,
             @Nonnull final ContentCountry contentCountry,
             @Nonnull final String videoId,
-            @Nonnull final String sts,
+            @Nonnull final Integer sts,
             final boolean isTvHtml5DesktopJsonBuilder,
             @Nonnull final String contentPlaybackNonce) throws IOException, ExtractionException {
         // @formatter:off
@@ -1410,9 +1479,9 @@ public final class YoutubeParsingHelper {
      */
     @Nonnull
     public static String getAndroidUserAgent(@Nullable final Localization localization) {
-        // Spoofing an Android 12 device with the hardcoded version of the Android app
+        // Spoofing an Android 14 device with the hardcoded version of the Android app
         return "com.google.android.youtube/" + ANDROID_YOUTUBE_CLIENT_VERSION
-                + " (Linux; U; Android 12; "
+                + " (Linux; U; Android 14; "
                 + (localization != null ? localization : Localization.DEFAULT).getCountryCode()
                 + ") gzip";
     }
@@ -1432,9 +1501,9 @@ public final class YoutubeParsingHelper {
      */
     @Nonnull
     public static String getIosUserAgent(@Nullable final Localization localization) {
-        // Spoofing an iPhone 13 running iOS 15.6 with the hardcoded version of the iOS app
+        // Spoofing an iPhone 15 running iOS 17.1.2 with the hardcoded version of the iOS app
         return "com.google.ios.youtube/" + IOS_YOUTUBE_CLIENT_VERSION
-                + "(" + IOS_DEVICE_MODEL + "; U; CPU iOS 15_6 like Mac OS X; "
+                + "(" + IOS_DEVICE_MODEL + "; U; CPU iOS 17_1_2 like Mac OS X; "
                 + (localization != null ? localization : Localization.DEFAULT).getCountryCode()
                 + ")";
     }
@@ -1505,13 +1574,15 @@ public final class YoutubeParsingHelper {
 
     @Nonnull
     public static String generateConsentCookie() {
-        return "CONSENT=" + (isConsentAccepted()
-                // YES+ means that the user did submit their choices and allows tracking.
-                ? "YES+"
-                // PENDING+ means that the user did not yet submit their choices.
-                // YT & Google should not track the user, because they did not give consent.
-                // The three digits at the end can be random, but are required.
-                : "PENDING+" + (100 + numberGenerator.nextInt(900)));
+        return "SOCS=" + (isConsentAccepted()
+                // CAISAiAD means that the user configured manually cookies YouTube, regardless of
+                // the consent values
+                // This value surprisingly allows to extract mixes and some YouTube Music playlists
+                // in the same way when a user allows all cookies
+                ? "CAISAiAD"
+                // CAE= means that the user rejected all non-necessary cookies with the "Reject
+                // all" button on the consent page
+                : "CAE=");
     }
 
     public static String extractCookieValue(final String cookieName,
@@ -1549,8 +1620,10 @@ public final class YoutubeParsingHelper {
             final String alertText = getTextFromObject(alertRenderer.getObject("text"));
             final String alertType = alertRenderer.getString("type", "");
             if (alertType.equalsIgnoreCase("ERROR")) {
-                if (alertText != null && alertText.contains("This account has been terminated")) {
-                    if (alertText.contains("violation") || alertText.contains("violating")
+                if (alertText != null
+                        && (alertText.contains("This account has been terminated")
+                        || alertText.contains("This channel was removed"))) {
+                    if (alertText.matches(".*violat(ed|ion|ing).*")
                             || alertText.contains("infringement")) {
                         // Possible error messages:
                         // "This account has been terminated for a violation of YouTube's Terms of
@@ -1572,6 +1645,7 @@ public final class YoutubeParsingHelper {
                         //     the user posted."
                         // "This account has been terminated because it is linked to an account that
                         //     received multiple third-party claims of copyright infringement."
+                        // "This channel was removed because it violated our Community Guidelines."
                         throw new AccountTerminatedException(alertText,
                                 AccountTerminatedException.Reason.VIOLATION);
                     } else {
@@ -1581,120 +1655,6 @@ public final class YoutubeParsingHelper {
                 throw new ContentNotAvailableException("Got error: \"" + alertText + "\"");
             }
         }
-    }
-
-    @Nonnull
-    public static List<MetaInfo> getMetaInfo(@Nonnull final JsonArray contents)
-            throws ParsingException {
-        final List<MetaInfo> metaInfo = new ArrayList<>();
-        for (final Object content : contents) {
-            final JsonObject resultObject = (JsonObject) content;
-            if (resultObject.has("itemSectionRenderer")) {
-                for (final Object sectionContentObject
-                        : resultObject.getObject("itemSectionRenderer").getArray("contents")) {
-
-                    final JsonObject sectionContent = (JsonObject) sectionContentObject;
-                    if (sectionContent.has("infoPanelContentRenderer")) {
-                        metaInfo.add(getInfoPanelContent(sectionContent
-                                .getObject("infoPanelContentRenderer")));
-                    }
-                    if (sectionContent.has("clarificationRenderer")) {
-                        metaInfo.add(getClarificationRendererContent(sectionContent
-                                .getObject("clarificationRenderer")
-                        ));
-                    }
-
-                }
-            }
-        }
-        return metaInfo;
-    }
-
-    @Nonnull
-    private static MetaInfo getInfoPanelContent(@Nonnull final JsonObject infoPanelContentRenderer)
-            throws ParsingException {
-        final MetaInfo metaInfo = new MetaInfo();
-        final StringBuilder sb = new StringBuilder();
-        for (final Object paragraph : infoPanelContentRenderer.getArray("paragraphs")) {
-            if (sb.length() != 0) {
-                sb.append("<br>");
-            }
-            sb.append(YoutubeParsingHelper.getTextFromObject((JsonObject) paragraph));
-        }
-        metaInfo.setContent(new Description(sb.toString(), Description.HTML));
-        if (infoPanelContentRenderer.has("sourceEndpoint")) {
-            final String metaInfoLinkUrl = YoutubeParsingHelper.getUrlFromNavigationEndpoint(
-                    infoPanelContentRenderer.getObject("sourceEndpoint"));
-            try {
-                metaInfo.addUrl(new URL(Objects.requireNonNull(extractCachedUrlIfNeeded(
-                        metaInfoLinkUrl))));
-            } catch (final NullPointerException | MalformedURLException e) {
-                throw new ParsingException("Could not get metadata info URL", e);
-            }
-
-            final String metaInfoLinkText = YoutubeParsingHelper.getTextFromObject(
-                    infoPanelContentRenderer.getObject("inlineSource"));
-            if (isNullOrEmpty(metaInfoLinkText)) {
-                throw new ParsingException("Could not get metadata info link text.");
-            }
-            metaInfo.addUrlText(metaInfoLinkText);
-        }
-
-        return metaInfo;
-    }
-
-    @Nonnull
-    private static MetaInfo getClarificationRendererContent(
-            @Nonnull final JsonObject clarificationRenderer) throws ParsingException {
-        final MetaInfo metaInfo = new MetaInfo();
-
-        final String title = YoutubeParsingHelper.getTextFromObject(clarificationRenderer
-                .getObject("contentTitle"));
-        final String text = YoutubeParsingHelper.getTextFromObject(clarificationRenderer
-                .getObject("text"));
-        if (title == null || text == null) {
-            throw new ParsingException("Could not extract clarification renderer content");
-        }
-        metaInfo.setTitle(title);
-        metaInfo.setContent(new Description(text, Description.PLAIN_TEXT));
-
-        if (clarificationRenderer.has("actionButton")) {
-            final JsonObject actionButton = clarificationRenderer.getObject("actionButton")
-                    .getObject("buttonRenderer");
-            try {
-                final String url = YoutubeParsingHelper.getUrlFromNavigationEndpoint(actionButton
-                        .getObject("command"));
-                metaInfo.addUrl(new URL(Objects.requireNonNull(extractCachedUrlIfNeeded(url))));
-            } catch (final NullPointerException | MalformedURLException e) {
-                throw new ParsingException("Could not get metadata info URL", e);
-            }
-
-            final String metaInfoLinkText = YoutubeParsingHelper.getTextFromObject(
-                    actionButton.getObject("text"));
-            if (isNullOrEmpty(metaInfoLinkText)) {
-                throw new ParsingException("Could not get metadata info link text.");
-            }
-            metaInfo.addUrlText(metaInfoLinkText);
-        }
-
-        if (clarificationRenderer.has("secondaryEndpoint") && clarificationRenderer
-                .has("secondarySource")) {
-            final String url = getUrlFromNavigationEndpoint(clarificationRenderer
-                    .getObject("secondaryEndpoint"));
-            // Ignore Google URLs, because those point to a Google search about "Covid-19"
-            if (url != null && !isGoogleURL(url)) {
-                try {
-                    metaInfo.addUrl(new URL(url));
-                    final String description = getTextFromObject(clarificationRenderer
-                            .getObject("secondarySource"));
-                    metaInfo.addUrlText(description == null ? url : description);
-                } catch (final MalformedURLException e) {
-                    throw new ParsingException("Could not get metadata info secondary URL", e);
-                }
-            }
-        }
-
-        return metaInfo;
     }
 
     /**
@@ -1803,14 +1763,28 @@ public final class YoutubeParsingHelper {
     }
 
     /**
-     * @see #consentAccepted
+     * Determines how the consent cookie that is required for YouTube, {@code SOCS}, will be
+     * generated.
+     *
+     * <ul>
+     *   <li>{@code false} (the default value) will use {@code CAE=};</li>
+     *   <li>{@code true} will use {@code CAISAiAD}.</li>
+     * </ul>
+     *
+     * <p>
+     * Setting this value to {@code true} is needed to extract mixes and some YouTube Music
+     * playlists in some countries such as the EU ones.
+     * </p>
      */
     public static void setConsentAccepted(final boolean accepted) {
         consentAccepted = accepted;
     }
 
     /**
-     * @see #consentAccepted
+     * Get the value of the consent's acceptance.
+     *
+     * @see #setConsentAccepted(boolean)
+     * @return the consent's acceptance value
      */
     public static boolean isConsentAccepted() {
         return consentAccepted;

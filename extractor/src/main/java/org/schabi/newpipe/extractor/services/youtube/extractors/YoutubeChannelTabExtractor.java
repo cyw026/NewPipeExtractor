@@ -78,12 +78,13 @@ public class YoutubeChannelTabExtractor extends ChannelTabExtractor {
                 return "EgZzaG9ydHPyBgUKA5oBAA%3D%3D";
             case ChannelTabs.LIVESTREAMS:
                 return "EgdzdHJlYW1z8gYECgJ6AA%3D%3D";
+            case ChannelTabs.ALBUMS:
+                return "EghyZWxlYXNlc_IGBQoDsgEA";
             case ChannelTabs.PLAYLISTS:
                 return "EglwbGF5bGlzdHPyBgQKAkIA";
-            case ChannelTabs.CHANNELS:
-                return "EghjaGFubmVsc_IGBAoCUgA%3D";
+            default:
+                throw new ParsingException("Unsupported channel tab: " + name);
         }
-        throw new ParsingException("Unsupported channel tab: " + name);
     }
 
     @Override
@@ -301,11 +302,11 @@ public class YoutubeChannelTabExtractor extends ChannelTabExtractor {
                 getCommitVideoConsumer(collector, timeAgoParser, channelIds,
                         richItem.getObject("videoRenderer"));
             } else if (richItem.has("reelItemRenderer")) {
-                getCommitReelItemConsumer(collector, timeAgoParser, channelIds,
+                getCommitReelItemConsumer(collector, channelIds,
                         richItem.getObject("reelItemRenderer"));
             } else if (richItem.has("playlistRenderer")) {
                 getCommitPlaylistConsumer(collector, channelIds,
-                        item.getObject("playlistRenderer"));
+                        richItem.getObject("playlistRenderer"));
             }
         } else if (item.has("gridVideoRenderer")) {
             getCommitVideoConsumer(collector, timeAgoParser, channelIds,
@@ -313,9 +314,6 @@ public class YoutubeChannelTabExtractor extends ChannelTabExtractor {
         } else if (item.has("gridPlaylistRenderer")) {
             getCommitPlaylistConsumer(collector, channelIds,
                     item.getObject("gridPlaylistRenderer"));
-        } else if (item.has("gridChannelRenderer")) {
-            collector.commit(new YoutubeChannelInfoItemExtractor(
-                    item.getObject("gridChannelRenderer")));
         } else if (item.has("shelfRenderer")) {
             return collectItem(collector, item.getObject("shelfRenderer")
                     .getObject("content"), channelIds);
@@ -360,11 +358,10 @@ public class YoutubeChannelTabExtractor extends ChannelTabExtractor {
     }
 
     private void getCommitReelItemConsumer(@Nonnull final MultiInfoItemsCollector collector,
-                                           @Nonnull final TimeAgoParser timeAgoParser,
                                            @Nonnull final List<String> channelIds,
                                            @Nonnull final JsonObject jsonObject) {
         collector.commit(
-                new YoutubeReelInfoItemExtractor(jsonObject, timeAgoParser) {
+                new YoutubeReelInfoItemExtractor(jsonObject) {
                     @Override
                     public String getUploaderName() throws ParsingException {
                         if (channelIds.size() >= 2) {
