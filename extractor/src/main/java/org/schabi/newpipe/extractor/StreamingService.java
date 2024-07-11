@@ -1,7 +1,6 @@
 package org.schabi.newpipe.extractor;
 
 
-import android.util.LruCache;
 
 import org.schabi.newpipe.extractor.channel.ChannelExtractor;
 import org.schabi.newpipe.extractor.channel.tabs.ChannelTabExtractor;
@@ -95,8 +94,6 @@ public abstract class StreamingService {
 
     private final int serviceId;
     private final ServiceInfo serviceInfo;
-    private LruCache<String, String> lruCache;
-
 
     /**
      * Creates a new Streaming service.
@@ -120,13 +117,6 @@ public abstract class StreamingService {
 
     public ServiceInfo getServiceInfo() {
         return serviceInfo;
-    }
-
-    public LruCache<String, String> getLruCache() {
-        if (lruCache == null) {
-            this.lruCache = new LruCache<>(60);
-        }
-        return lruCache;
     }
 
     @Override
@@ -441,7 +431,6 @@ public abstract class StreamingService {
             }
         }
         return null;
-//        throw new IllegalArgumentException("Localization is not supported (\"" + localization + "\")");
     }
 
 }
