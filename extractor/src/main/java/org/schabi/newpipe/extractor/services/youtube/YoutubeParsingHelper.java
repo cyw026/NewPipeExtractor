@@ -48,6 +48,7 @@ import org.schabi.newpipe.extractor.playlist.PlaylistInfo;
 import org.schabi.newpipe.extractor.stream.AudioTrackType;
 import org.schabi.newpipe.extractor.utils.JsonUtils;
 import org.schabi.newpipe.extractor.utils.Parser;
+import org.schabi.newpipe.extractor.utils.ProtoBuilder;
 import org.schabi.newpipe.extractor.utils.RandomStringFromAlphabetGenerator;
 import org.schabi.newpipe.extractor.utils.Utils;
 
@@ -174,7 +175,7 @@ public final class YoutubeParsingHelper {
      * Store page of the YouTube app</a>, in the {@code What’s New} section.
      * </p>
      */
-    private static final String IOS_YOUTUBE_CLIENT_VERSION = "19.28.1";
+    private static final String IOS_YOUTUBE_CLIENT_VERSION = "19.45.4";
 
     /**
      * The hardcoded client version used for InnerTube requests with the TV HTML5 embed client.
@@ -212,7 +213,7 @@ public final class YoutubeParsingHelper {
             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
     /**
-     * The device machine id for the iPhone 15, used to get 60fps with the {@code iOS} client.
+     * The device machine id for the iPhone 16, used to get 60fps with the {@code iOS} client.
      *
      * <p>
      * See <a href="https://gist.github.com/adamawolf/3048717">this GitHub Gist</a> for more
@@ -222,28 +223,28 @@ public final class YoutubeParsingHelper {
     private static final String IOS_DEVICE_MODEL = "iPhone16,2";
 
     /**
-     * Spoofing an iPhone 15 Pro Max running iOS 17.5.1 with the hardcoded version of the iOS app.
+     * Spoofing an iPhone 16 Pro Max running iOS 18.1.0 with the hardcoded version of the iOS app.
      * To be used for the {@code "osVersion"} field in JSON POST requests.
      * <p>
      * The value of this field seems to use the following structure:
      * "iOS major version.minor version.patch version.build version", where
      * "patch version" is equal to 0 if it isn't set
      * The build version corresponding to the iOS version used can be found on
-     * <a href="https://theapplewiki.com/wiki/Firmware/iPhone/17.x#iPhone_15_Pro_Max">
-     *     https://theapplewiki.com/wiki/Firmware/iPhone/17.x#iPhone_15_Pro_Max</a>
+     * <a href="https://theapplewiki.com/wiki/Firmware/iPhone/18.x#iPhone_16_Pro_Max">
+     * https://theapplewiki.com/wiki/Firmware/iPhone/18.x#iPhone_16_Pro_Max</a>
      * </p>
      *
      * @see #IOS_USER_AGENT_VERSION
      */
-    private static final String IOS_OS_VERSION = "17.5.1.21F90";
+    private static final String IOS_OS_VERSION = "18.1.0.22B83";
 
     /**
-     * Spoofing an iPhone 15 running iOS 17.5.1 with the hardcoded version of the iOS app. To be
+     * Spoofing an iPhone 16 Pro Max running iOS 18.1.0 with the hardcoded version of the iOS app. To be
      * used in the user agent for requests.
      *
      * @see #IOS_OS_VERSION
      */
-    private static final String IOS_USER_AGENT_VERSION = "17_5_1";
+    private static final String IOS_USER_AGENT_VERSION = "18_1_0";
 
     private static Random numberGenerator = new Random();
 
@@ -301,6 +302,23 @@ public final class YoutubeParsingHelper {
 
     public static boolean isY2ubeURL(@Nonnull final URL url) {
         return url.getHost().equalsIgnoreCase("y2u.be");
+    }
+
+    public static String randomVisitorData(final ContentCountry country) {
+        final ProtoBuilder pbE2 = new ProtoBuilder();
+        pbE2.string(2, "");
+        pbE2.varint(4, numberGenerator.nextInt(255) + 1);
+
+        final ProtoBuilder pbE = new ProtoBuilder();
+        pbE.string(1, country.getCountryCode());
+        pbE.bytes(2, pbE2.toBytes());
+
+        final ProtoBuilder pb = new ProtoBuilder();
+        pb.string(1, RandomStringFromAlphabetGenerator.generate(
+                CONTENT_PLAYBACK_NONCE_ALPHABET, 11, numberGenerator));
+        pb.varint(5, System.currentTimeMillis() / 1000 - numberGenerator.nextInt(600000));
+        pb.bytes(6, pbE.toBytes());
+        return pb.toUrlencodedBase64();
     }
 
     /**
@@ -433,7 +451,7 @@ public final class YoutubeParsingHelper {
     /**
      * @param playlistId the playlist id to parse
      * @return the {@link PlaylistInfo.PlaylistType} extracted from the playlistId (mix playlist
-     *         types included)
+     * types included)
      * @throws ParsingException if the playlistId is null or empty, if the playlistId is not a mix,
      *                          if it is a mix but it's not based on a specific stream (this is the
      *                          case for channel or genre mixes)
@@ -466,7 +484,7 @@ public final class YoutubeParsingHelper {
                 // 11 characters then it can't be a video id, hence we are dealing with a different
                 // type of mix (e.g. genre mixes handled above, of the form RDGMEM{garbage})
                 throw new ParsingException("Video id could not be determined from mix id: "
-                    + playlistId);
+                        + playlistId);
             }
             return playlistId.substring(2);
 
@@ -479,7 +497,7 @@ public final class YoutubeParsingHelper {
     /**
      * @param playlistId the playlist id to parse
      * @return the {@link PlaylistInfo.PlaylistType} extracted from the playlistId (mix playlist
-     *         types included)
+     * types included)
      * @throws ParsingException if the playlistId is null or empty
      */
     @Nonnull
@@ -507,7 +525,7 @@ public final class YoutubeParsingHelper {
     /**
      * @param playlistUrl the playlist url to parse
      * @return the {@link PlaylistInfo.PlaylistType} extracted from the playlistUrl's list param
-     *         (mix playlist types included)
+     * (mix playlist types included)
      * @throws ParsingException if the playlistUrl is malformed, if has no list param or if the list
      *                          param is empty
      */
@@ -537,29 +555,29 @@ public final class YoutubeParsingHelper {
         }
         // @formatter:off
         final byte[] body = JsonWriter.string()
-            .object()
+                .object()
                 .object("context")
-                    .object("client")
-                        .value("hl", "en-GB")
-                        .value("gl", "GB")
-                        .value("clientName", "WEB")
-                        .value("clientVersion", HARDCODED_CLIENT_VERSION)
-                        .value("platform", "DESKTOP")
-                        .value("utcOffsetMinutes", 0)
-                    .end()
-                    .object("request")
-                        .array("internalExperimentFlags")
-                        .end()
-                        .value("useSsl", true)
-                    .end()
-                    .object("user")
-                        // TODO: provide a way to enable restricted mode with:
-                        //  .value("enableSafetyMode", boolean)
-                        .value("lockedSafetyMode", false)
-                    .end()
+                .object("client")
+                .value("hl", "en-GB")
+                .value("gl", "GB")
+                .value("clientName", "WEB")
+                .value("clientVersion", HARDCODED_CLIENT_VERSION)
+                .value("platform", "DESKTOP")
+                .value("utcOffsetMinutes", 0)
+                .end()
+                .object("request")
+                .array("internalExperimentFlags")
+                .end()
+                .value("useSsl", true)
+                .end()
+                .object("user")
+                // TODO: provide a way to enable restricted mode with:
+                //  .value("enableSafetyMode", boolean)
+                .value("lockedSafetyMode", false)
+                .end()
                 .end()
                 .value("fetchLiveState", true)
-            .end().done().getBytes(StandardCharsets.UTF_8);
+                .end().done().getBytes(StandardCharsets.UTF_8);
         // @formatter:on
 
         final var headers = getClientHeaders(WEB_CLIENT_ID, HARDCODED_CLIENT_VERSION);
@@ -637,7 +655,7 @@ public final class YoutubeParsingHelper {
             throw new ParsingException(
                     // CHECKSTYLE:OFF
                     "Could not extract YouTube WEB InnerTube client version from HTML search results page");
-                    // CHECKSTYLE:ON
+            // CHECKSTYLE:ON
         }
 
         clientVersionExtracted = true;
@@ -730,29 +748,29 @@ public final class YoutubeParsingHelper {
 
         // @formatter:off
         final byte[] json = JsonWriter.string()
-            .object()
+                .object()
                 .object("context")
-                    .object("client")
-                        .value("clientName", "WEB_REMIX")
-                        .value("clientVersion", HARDCODED_YOUTUBE_MUSIC_CLIENT_VERSION)
-                        .value("hl", "en-GB")
-                        .value("gl", "GB")
-                        .value("platform", "DESKTOP")
-                        .value("utcOffsetMinutes", 0)
-                    .end()
-                    .object("request")
-                        .array("internalExperimentFlags")
-                        .end()
-                        .value("useSsl", true)
-                    .end()
-                    .object("user")
-                        // TODO: provide a way to enable restricted mode with:
-                        //  .value("enableSafetyMode", boolean)
-                        .value("lockedSafetyMode", false)
-                    .end()
+                .object("client")
+                .value("clientName", "WEB_REMIX")
+                .value("clientVersion", HARDCODED_YOUTUBE_MUSIC_CLIENT_VERSION)
+                .value("hl", "en-GB")
+                .value("gl", "GB")
+                .value("platform", "DESKTOP")
+                .value("utcOffsetMinutes", 0)
+                .end()
+                .object("request")
+                .array("internalExperimentFlags")
+                .end()
+                .value("useSsl", true)
+                .end()
+                .object("user")
+                // TODO: provide a way to enable restricted mode with:
+                //  .value("enableSafetyMode", boolean)
+                .value("lockedSafetyMode", false)
+                .end()
                 .end()
                 .value("input", "")
-            .end().done().getBytes(StandardCharsets.UTF_8);
+                .end().done().getBytes(StandardCharsets.UTF_8);
         // @formatter:on
 
         final var headers = new HashMap<>(getOriginReferrerHeaders(YOUTUBE_MUSIC_URL));
@@ -853,7 +871,7 @@ public final class YoutubeParsingHelper {
             if (navigationEndpoint.getObject("watchEndpoint").has("startTimeSeconds")) {
                 url.append("&t=")
                         .append(navigationEndpoint.getObject("watchEndpoint")
-                        .getInt("startTimeSeconds"));
+                                .getInt("startTimeSeconds"));
             }
             return url.toString();
         }
@@ -1166,33 +1184,34 @@ public final class YoutubeParsingHelper {
             @Nonnull final ContentCountry contentCountry,
             @Nullable final String visitorData)
             throws IOException, ExtractionException {
-        // @formatter:off
-        final JsonBuilder<JsonObject> builder = JsonObject.builder()
-                .object("context")
-                    .object("client")
-                        .value("hl", localization.getLocalizationCode())
-                        .value("gl", contentCountry.getCountryCode())
-                        .value("clientName", "WEB")
-                        .value("clientVersion", getClientVersion())
-                        .value("originalUrl", "https://www.youtube.com")
-                        .value("platform", "DESKTOP")
-                        .value("utcOffsetMinutes", 0);
-
-        if (visitorData != null) {
-            builder.value("visitorData", visitorData);
+        String vData = visitorData;
+        if (vData == null) {
+            vData = randomVisitorData(contentCountry);
         }
 
-        return builder.end()
-                    .object("request")
-                        .array("internalExperimentFlags")
-                        .end()
-                        .value("useSsl", true)
-                    .end()
-                    .object("user")
-                        // TODO: provide a way to enable restricted mode with:
-                        //  .value("enableSafetyMode", boolean)
-                        .value("lockedSafetyMode", false)
-                    .end()
+        // @formatter:off
+        return JsonObject.builder()
+                .object("context")
+                .object("client")
+                .value("hl", localization.getLocalizationCode())
+                .value("gl", contentCountry.getCountryCode())
+                .value("clientName", "WEB")
+                .value("clientVersion", getClientVersion())
+                .value("originalUrl", "https://www.youtube.com")
+                .value("platform", "DESKTOP")
+                .value("utcOffsetMinutes", 0)
+                .value("visitorData", vData)
+                .end()
+                .object("request")
+                .array("internalExperimentFlags")
+                .end()
+                .value("useSsl", true)
+                .end()
+                .object("user")
+                // TODO: provide a way to enable restricted mode with:
+                //  .value("enableSafetyMode", boolean)
+                .value("lockedSafetyMode", false)
+                .end()
                 .end();
         // @formatter:on
     }
@@ -1204,38 +1223,38 @@ public final class YoutubeParsingHelper {
         // @formatter:off
         return JsonObject.builder()
                 .object("context")
-                    .object("client")
-                        .value("clientName", "ANDROID")
-                        .value("clientVersion", ANDROID_YOUTUBE_CLIENT_VERSION)
-                        .value("platform", "MOBILE")
-                        .value("osName", "Android")
-                        .value("osVersion", "14")
-                        /*
-                        A valid Android SDK version is required to be sure to get a valid player
-                        response
-                        If this parameter is not provided, the player response is replaced by an
-                        error saying the message "The following content is not available on this
-                        app. Watch this content on the latest version on YouTube" (it was
-                        previously a 5-minute video with this message)
-                        See https://github.com/TeamNewPipe/NewPipe/issues/8713
-                        The Android SDK version corresponding to the Android version used in
-                        requests is sent
-                        */
-                        .value("androidSdkVersion", 34)
-                        .value("hl", localization.getLocalizationCode())
-                        .value("gl", contentCountry.getCountryCode())
-                        .value("utcOffsetMinutes", 0)
-                    .end()
-                    .object("request")
-                        .array("internalExperimentFlags")
-                        .end()
-                        .value("useSsl", true)
-                    .end()
-                    .object("user")
-                        // TODO: provide a way to enable restricted mode with:
-                        //  .value("enableSafetyMode", boolean)
-                        .value("lockedSafetyMode", false)
-                    .end()
+                .object("client")
+                .value("clientName", "ANDROID")
+                .value("clientVersion", ANDROID_YOUTUBE_CLIENT_VERSION)
+                .value("platform", "MOBILE")
+                .value("osName", "Android")
+                .value("osVersion", "14")
+                /*
+                A valid Android SDK version is required to be sure to get a valid player
+                response
+                If this parameter is not provided, the player response is replaced by an
+                error saying the message "The following content is not available on this
+                app. Watch this content on the latest version on YouTube" (it was
+                previously a 5-minute video with this message)
+                See https://github.com/TeamNewPipe/NewPipe/issues/8713
+                The Android SDK version corresponding to the Android version used in
+                requests is sent
+                */
+                .value("androidSdkVersion", 34)
+                .value("hl", localization.getLocalizationCode())
+                .value("gl", contentCountry.getCountryCode())
+                .value("utcOffsetMinutes", 0)
+                .end()
+                .object("request")
+                .array("internalExperimentFlags")
+                .end()
+                .value("useSsl", true)
+                .end()
+                .object("user")
+                // TODO: provide a way to enable restricted mode with:
+                //  .value("enableSafetyMode", boolean)
+                .value("lockedSafetyMode", false)
+                .end()
                 .end();
         // @formatter:on
     }
@@ -1247,29 +1266,30 @@ public final class YoutubeParsingHelper {
         // @formatter:off
         return JsonObject.builder()
                 .object("context")
-                    .object("client")
-                        .value("clientName", "IOS")
-                        .value("clientVersion", IOS_YOUTUBE_CLIENT_VERSION)
-                        .value("deviceMake",  "Apple")
-                        // Device model is required to get 60fps streams
-                        .value("deviceModel", IOS_DEVICE_MODEL)
-                        .value("platform", "MOBILE")
-                        .value("osName", "iOS")
-                        .value("osVersion", IOS_OS_VERSION)
-                        .value("hl", localization.getLocalizationCode())
-                        .value("gl", contentCountry.getCountryCode())
-                        .value("utcOffsetMinutes", 0)
-                    .end()
-                    .object("request")
-                        .array("internalExperimentFlags")
-                        .end()
-                        .value("useSsl", true)
-                    .end()
-                    .object("user")
-                        // TODO: provide a way to enable restricted mode with:
-                        //  .value("enableSafetyMode", boolean)
-                        .value("lockedSafetyMode", false)
-                    .end()
+                .object("client")
+                .value("clientName", "IOS")
+                .value("clientVersion", IOS_YOUTUBE_CLIENT_VERSION)
+                .value("deviceMake",  "Apple")
+                // Device model is required to get 60fps streams
+                .value("deviceModel", IOS_DEVICE_MODEL)
+                .value("platform", "MOBILE")
+                .value("osName", "iOS")
+                .value("osVersion", IOS_OS_VERSION)
+                .value("visitorData", randomVisitorData(contentCountry))
+                .value("hl", localization.getLocalizationCode())
+                .value("gl", contentCountry.getCountryCode())
+                .value("utcOffsetMinutes", 0)
+                .end()
+                .object("request")
+                .array("internalExperimentFlags")
+                .end()
+                .value("useSsl", true)
+                .end()
+                .object("user")
+                // TODO: provide a way to enable restricted mode with:
+                //  .value("enableSafetyMode", boolean)
+                .value("lockedSafetyMode", false)
+                .end()
                 .end();
         // @formatter:on
     }
@@ -1282,28 +1302,28 @@ public final class YoutubeParsingHelper {
         // @formatter:off
         return JsonObject.builder()
                 .object("context")
-                    .object("client")
-                        .value("clientName", "TVHTML5_SIMPLY_EMBEDDED_PLAYER")
-                        .value("clientVersion", TVHTML5_SIMPLY_EMBED_CLIENT_VERSION)
-                        .value("clientScreen", "EMBED")
-                        .value("platform", "TV")
-                        .value("hl", localization.getLocalizationCode())
-                        .value("gl", contentCountry.getCountryCode())
-                        .value("utcOffsetMinutes", 0)
-                    .end()
-                    .object("thirdParty")
-                        .value("embedUrl", "https://www.youtube.com/watch?v=" + videoId)
-                    .end()
-                    .object("request")
-                        .array("internalExperimentFlags")
-                        .end()
-                        .value("useSsl", true)
-                    .end()
-                    .object("user")
-                        // TODO: provide a way to enable restricted mode with:
-                        //  .value("enableSafetyMode", boolean)
-                        .value("lockedSafetyMode", false)
-                    .end()
+                .object("client")
+                .value("clientName", "TVHTML5_SIMPLY_EMBEDDED_PLAYER")
+                .value("clientVersion", TVHTML5_SIMPLY_EMBED_CLIENT_VERSION)
+                .value("clientScreen", "EMBED")
+                .value("platform", "TV")
+                .value("hl", localization.getLocalizationCode())
+                .value("gl", contentCountry.getCountryCode())
+                .value("utcOffsetMinutes", 0)
+                .end()
+                .object("thirdParty")
+                .value("embedUrl", "https://www.youtube.com/watch?v=" + videoId)
+                .end()
+                .object("request")
+                .array("internalExperimentFlags")
+                .end()
+                .value("useSsl", true)
+                .end()
+                .object("user")
+                // TODO: provide a way to enable restricted mode with:
+                //  .value("enableSafetyMode", boolean)
+                .value("lockedSafetyMode", false)
+                .end()
                 .end();
         // @formatter:on
     }
@@ -1392,7 +1412,7 @@ public final class YoutubeParsingHelper {
      */
     @Nonnull
     public static String getIosUserAgent(@Nullable final Localization localization) {
-        // Spoofing an iPhone 15 running iOS 17.5.1 with the hardcoded version of the iOS app
+        // Spoofing an iPhone 16 Pro Max running iOS 17.5.1 with the hardcoded version of the iOS app
         return "com.google.ios.youtube/" + IOS_YOUTUBE_CLIENT_VERSION
                 + "(" + IOS_DEVICE_MODEL + "; U; CPU iOS "
                 + IOS_USER_AGENT_VERSION + " like Mac OS X; "
@@ -1448,7 +1468,7 @@ public final class YoutubeParsingHelper {
      * Returns an unmodifiable {@link Map} containing the {@code X-YouTube-Client-Name} and
      * {@code X-YouTube-Client-Version} headers.
      *
-     * @param name The X-YouTube-Client-Name value.
+     * @param name    The X-YouTube-Client-Name value.
      * @param version X-YouTube-Client-Version value.
      */
     private static Map<String, List<String>> getClientHeaders(@Nonnull final String name,
