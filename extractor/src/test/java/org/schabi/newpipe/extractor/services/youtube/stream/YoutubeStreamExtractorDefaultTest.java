@@ -69,14 +69,14 @@ public class YoutubeStreamExtractorDefaultTest {
     public static final String YOUTUBE_LICENCE = "YouTube licence";
 
     public static class NotAvailable {
-        @BeforeAll
-        public static void setUp() throws IOException {
-            YoutubeTestsUtils.ensureStateless();
-            NewPipe.init(DownloaderFactory.getDownloader(RESOURCE_PATH + "notAvailable"));
-        }
+        private static final String RESOURCE_PATH =
+                YoutubeStreamExtractorDefaultTest.RESOURCE_PATH + "notAvailable/";
 
         @Test
         void geoRestrictedContent() throws Exception {
+            YoutubeTestsUtils.ensureStateless();
+            NewPipe.init(DownloaderFactory.getDownloader(RESOURCE_PATH + "restricted"));
+
             final StreamExtractor extractor =
                     YouTube.getStreamExtractor(BASE_URL + "_PL2HJKxnOM");
             assertThrows(GeographicRestrictionException.class, extractor::fetchPage);
@@ -84,6 +84,9 @@ public class YoutubeStreamExtractorDefaultTest {
 
         @Test
         void nonExistentFetch() throws Exception {
+            YoutubeTestsUtils.ensureStateless();
+            NewPipe.init(DownloaderFactory.getDownloader(RESOURCE_PATH + "nonExistent"));
+
             final StreamExtractor extractor =
                     YouTube.getStreamExtractor(BASE_URL + "don-t-exist");
             assertThrows(ContentNotAvailableException.class, extractor::fetchPage);
@@ -91,6 +94,9 @@ public class YoutubeStreamExtractorDefaultTest {
 
         @Test
         void invalidId() throws Exception {
+            YoutubeTestsUtils.ensureStateless();
+            NewPipe.init(DownloaderFactory.getDownloader(RESOURCE_PATH + "invalidId"));
+
             final StreamExtractor extractor =
                     YouTube.getStreamExtractor(BASE_URL + "INVALID_ID_INVALID_ID");
             assertThrows(ParsingException.class, extractor::fetchPage);
@@ -98,6 +104,9 @@ public class YoutubeStreamExtractorDefaultTest {
 
         @Test
         void paidContent() throws Exception {
+            YoutubeTestsUtils.ensureStateless();
+            NewPipe.init(DownloaderFactory.getDownloader(RESOURCE_PATH + "paidContent"));
+
             final StreamExtractor extractor =
                     YouTube.getStreamExtractor(BASE_URL + "ayI2iBwGdxw");
             assertThrows(PaidContentException.class, extractor::fetchPage);
@@ -105,6 +114,9 @@ public class YoutubeStreamExtractorDefaultTest {
 
         @Test
         void privateContent() throws Exception {
+            YoutubeTestsUtils.ensureStateless();
+            NewPipe.init(DownloaderFactory.getDownloader(RESOURCE_PATH + "privateContent"));
+
             final StreamExtractor extractor =
                     YouTube.getStreamExtractor(BASE_URL + "8VajtrESJzA");
             assertThrows(PrivateContentException.class, extractor::fetchPage);
@@ -112,6 +124,9 @@ public class YoutubeStreamExtractorDefaultTest {
 
         @Test
         void youtubeMusicPremiumContent() throws Exception {
+            YoutubeTestsUtils.ensureStateless();
+            NewPipe.init(DownloaderFactory.getDownloader(RESOURCE_PATH + "musicPremiumContent"));
+
             final StreamExtractor extractor =
                     YouTube.getStreamExtractor(BASE_URL + "sMJ8bRN2dak");
             assertThrows(YoutubeMusicPremiumContentException.class, extractor::fetchPage);
