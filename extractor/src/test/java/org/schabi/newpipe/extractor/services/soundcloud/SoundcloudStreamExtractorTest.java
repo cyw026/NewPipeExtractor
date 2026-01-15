@@ -1,12 +1,15 @@
 package org.schabi.newpipe.extractor.services.soundcloud;
 
-import org.junit.jupiter.api.BeforeAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.schabi.newpipe.extractor.ServiceList.SoundCloud;
+
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.schabi.newpipe.downloader.DownloaderTestImpl;
 import org.schabi.newpipe.extractor.ExtractorAsserts;
 import org.schabi.newpipe.extractor.MediaFormat;
-import org.schabi.newpipe.extractor.NewPipe;
 import org.schabi.newpipe.extractor.StreamingService;
 import org.schabi.newpipe.extractor.exceptions.GeographicRestrictionException;
 import org.schabi.newpipe.extractor.exceptions.SoundCloudGoPlusContentException;
@@ -22,33 +25,30 @@ import java.util.List;
 
 import javax.annotation.Nullable;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.fail;
-import static org.schabi.newpipe.extractor.ServiceList.SoundCloud;
-
 public class SoundcloudStreamExtractorTest {
     private static final String SOUNDCLOUD = "https://soundcloud.com/";
 
-    public static class SoundcloudGeoRestrictedTrack extends DefaultStreamExtractorTest {
+    @Nested
+    class SoundcloudGeoRestrictedTrack extends DefaultStreamExtractorTest {
         private static final String ID = "one-touch";
         private static final String UPLOADER = SOUNDCLOUD + "jessglynne";
         private static final int TIMESTAMP = 0;
         private static final String URL = UPLOADER + "/" + ID + "#t=" + TIMESTAMP;
-        private static StreamExtractor extractor;
 
-        @BeforeAll
-        public static void setUp() throws Exception {
-            NewPipe.init(DownloaderTestImpl.getInstance());
-            extractor = SoundCloud.getStreamExtractor(URL);
+        @Override
+        protected StreamExtractor createExtractor() throws Exception {
+            return SoundCloud.getStreamExtractor(URL);
+        }
+
+        @Override
+        protected void fetchExtractor(final StreamExtractor extractor) throws Exception {
             try {
-                extractor.fetchPage();
+                super.fetchExtractor(extractor);
             } catch (final GeographicRestrictionException e) {
                 // expected
             }
         }
 
-        @Override public StreamExtractor extractor() { return extractor; }
         @Override public StreamingService expectedService() { return SoundCloud; }
         @Override public String expectedName() { return "One Touch"; }
         @Override public String expectedId() { return "621612588"; }
@@ -65,7 +65,7 @@ public class SoundcloudStreamExtractorTest {
         @Override public long expectedTimestamp() { return TIMESTAMP; }
         @Override public long expectedViewCountAtLeast() { return 43000; }
         @Nullable @Override public String expectedUploadDate() { return "2019-05-16 16:28:45.000"; }
-        @Nullable @Override public String expectedTextualUploadDate() { return "2019-05-16 16:28:45"; }
+        @Nullable @Override public String expectedTextualUploadDate() { return "2019-05-16T16:28:45Z"; }
         @Override public long expectedLikeCountAtLeast() { return 600; }
         @Override public long expectedDislikeCountAtLeast() { return -1; }
         @Override public boolean expectedHasAudioStreams() { return false; }
@@ -84,19 +84,22 @@ public class SoundcloudStreamExtractorTest {
         }
     }
 
-    public static class SoundcloudGoPlusTrack extends DefaultStreamExtractorTest {
+    @Nested
+    class SoundcloudGoPlusTrack extends DefaultStreamExtractorTest {
         private static final String ID = "places";
         private static final String UPLOADER = SOUNDCLOUD + "martinsolveig";
         private static final int TIMESTAMP = 0;
         private static final String URL = UPLOADER + "/" + ID + "#t=" + TIMESTAMP;
-        private static StreamExtractor extractor;
 
-        @BeforeAll
-        public static void setUp() throws Exception {
-            NewPipe.init(DownloaderTestImpl.getInstance());
-            extractor = SoundCloud.getStreamExtractor(URL);
+        @Override
+        protected StreamExtractor createExtractor() throws Exception {
+            return SoundCloud.getStreamExtractor(URL);
+        }
+
+        @Override
+        protected void fetchExtractor(final StreamExtractor extractor) throws Exception {
             try {
-                extractor.fetchPage();
+                super.fetchExtractor(extractor);
             } catch (final SoundCloudGoPlusContentException e) {
                 // expected
             }
@@ -111,7 +114,6 @@ public class SoundcloudStreamExtractorTest {
             super.testRelatedItems();
         }
 
-        @Override public StreamExtractor extractor() { return extractor; }
         @Override public StreamingService expectedService() { return SoundCloud; }
         @Override public String expectedName() { return "Places (feat. Ina Wroldsen)"; }
         @Override public String expectedId() { return "292479564"; }
@@ -128,12 +130,11 @@ public class SoundcloudStreamExtractorTest {
         @Override public long expectedTimestamp() { return TIMESTAMP; }
         @Override public long expectedViewCountAtLeast() { return 386000; }
         @Nullable @Override public String expectedUploadDate() { return "2016-11-11 01:16:37.000"; }
-        @Nullable @Override public String expectedTextualUploadDate() { return "2016-11-11 01:16:37"; }
+        @Nullable @Override public String expectedTextualUploadDate() { return "2016-11-11T01:16:37Z"; }
         @Override public long expectedLikeCountAtLeast() { return 7350; }
         @Override public long expectedDislikeCountAtLeast() { return -1; }
         @Override public boolean expectedHasAudioStreams() { return false; }
         @Override public boolean expectedHasVideoStreams() { return false; }
-        @Override public boolean expectedHasRelatedItems() { return true; }
         @Override public boolean expectedHasSubtitles() { return false; }
         @Override public boolean expectedHasFrames() { return false; }
         @Override public int expectedStreamSegmentsCount() { return 0; }
@@ -141,21 +142,18 @@ public class SoundcloudStreamExtractorTest {
         @Override public String expectedCategory() { return "Dance"; }
     }
 
-    static class CreativeCommonsOpenMindsEp21 extends DefaultStreamExtractorTest {
+    @Nested
+    class CreativeCommonsOpenMindsEp21 extends DefaultStreamExtractorTest {
         private static final String ID = "open-minds-ep-21-dr-beth-harris-and-dr-steven-zucker-of-smarthistory";
         private static final String UPLOADER = SOUNDCLOUD + "wearecc";
         private static final int TIMESTAMP = 69;
         private static final String URL = UPLOADER + "/" + ID + "#t=" + TIMESTAMP;
-        private static StreamExtractor extractor;
 
-        @BeforeAll
-        static void setUp() throws Exception {
-            NewPipe.init(DownloaderTestImpl.getInstance());
-            extractor = SoundCloud.getStreamExtractor(URL);
-            extractor.fetchPage();
+        @Override
+        protected StreamExtractor createExtractor() throws Exception {
+            return SoundCloud.getStreamExtractor(URL);
         }
 
-        @Override public StreamExtractor extractor() { return extractor; }
         @Override public StreamingService expectedService() { return SoundCloud; }
         @Override public String expectedName() { return "Open Minds, Ep 21: Dr. Beth Harris and Dr. Steven Zucker of Smarthistory"; }
         @Override public String expectedId() { return "1356023209"; }
@@ -173,7 +171,7 @@ public class SoundcloudStreamExtractorTest {
         @Override public long expectedTimestamp() { return TIMESTAMP; }
         @Override public long expectedViewCountAtLeast() { return 15000; }
         @Nullable @Override public String expectedUploadDate() { return "2022-10-03 18:49:49.000"; }
-        @Nullable @Override public String expectedTextualUploadDate() { return "2022-10-03 18:49:49"; }
+        @Nullable @Override public String expectedTextualUploadDate() { return "2022-10-03T18:49:49Z"; }
         @Override public long expectedLikeCountAtLeast() { return 10; }
         @Override public long expectedDislikeCountAtLeast() { return -1; }
         @Override public boolean expectedHasRelatedItems() { return false; }
@@ -187,7 +185,7 @@ public class SoundcloudStreamExtractorTest {
         @Test
         public void testAudioStreams() throws Exception {
             super.testAudioStreams();
-            final List<AudioStream> audioStreams = extractor.getAudioStreams();
+            final List<AudioStream> audioStreams = extractor().getAudioStreams();
             assertEquals(3, audioStreams.size()); // 2 MP3 streams (1 progressive, 1 HLS) and 1 OPUS
             audioStreams.forEach(audioStream -> {
                 final DeliveryMethod deliveryMethod = audioStream.getDeliveryMethod();

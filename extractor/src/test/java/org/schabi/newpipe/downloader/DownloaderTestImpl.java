@@ -7,7 +7,6 @@ import org.schabi.newpipe.extractor.downloader.Response;
 import org.schabi.newpipe.extractor.exceptions.ReCaptchaException;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -25,7 +24,7 @@ public final class DownloaderTestImpl extends Downloader {
      * Should be the latest Firefox ESR version.
      */
     private static final String USER_AGENT =
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0";
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0";
     private static DownloaderTestImpl instance;
     private final RateLimitedClientWrapper clientWrapper;
 
@@ -35,7 +34,7 @@ public final class DownloaderTestImpl extends Downloader {
                 // Required for certain services
                 // For example Bandcamp otherwise fails on Windows with Java 17+
                 // as their Fastly-CDN returns 403
-                .connectionSpecs(Arrays.asList(ConnectionSpec.RESTRICTED_TLS))
+                .connectionSpecs(List.of(ConnectionSpec.RESTRICTED_TLS))
                 .build());
     }
 
