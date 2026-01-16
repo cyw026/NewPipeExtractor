@@ -3,6 +3,9 @@ package org.schabi.newpipe.extractor.stream;
 import java.io.Serializable;
 import java.util.List;
 
+/**
+ * Class to handle framesets / storyboards which summarize the stream content.
+ */
 public final class Frameset implements Serializable {
 
     private final List<String> urls;
@@ -13,6 +16,17 @@ public final class Frameset implements Serializable {
     private final int framesPerPageX;
     private final int framesPerPageY;
 
+    /**
+     * Creates a new Frameset or set of storyboards.
+     * @param urls the URLs to the images with frames / storyboards
+     * @param frameWidth the width of a single frame, in pixels
+     * @param frameHeight the height of a single frame, in pixels
+     * @param totalCount the total count of frames
+     * @param durationPerFrame the duration per frame in milliseconds
+     * @param framesPerPageX the maximum count of frames per page by x / over the width of the image
+     * @param framesPerPageY the maximum count of frames per page by y / over the height
+     *                       of the image
+     */
     public Frameset(
             final List<String> urls,
             final int frameWidth,
@@ -21,7 +35,7 @@ public final class Frameset implements Serializable {
             final int durationPerFrame,
             final int framesPerPageX,
             final int framesPerPageY) {
-        
+
         this.urls = urls;
         this.totalCount = totalCount;
         this.durationPerFrame = durationPerFrame;
@@ -32,7 +46,7 @@ public final class Frameset implements Serializable {
     }
 
     /**
-     * @return list of urls to images with frames
+     * @return list of URLs to images with frames
      */
     public List<String> getUrls() {
         return urls;
@@ -84,8 +98,8 @@ public final class Frameset implements Serializable {
      * Returns the information for the frame at stream position.
      *
      * @param position Position in milliseconds
-     * @return An <code>int</code>-array containing the bounds and URL where the indexes are specified as
-     * followed:
+     * @return An <code>int</code>-array containing the bounds and URL where the indexes are
+     * specified as follows:
      *
      * <ul>
      *     <li><code>0</code>: Index of the URL</li>
@@ -96,9 +110,9 @@ public final class Frameset implements Serializable {
      * </ul>
      */
     public int[] getFrameBoundsAt(final long position) {
-        if (position < 0 || position > ((totalCount + 1) * durationPerFrame)) {
+        if (position < 0 || position > ((long) (totalCount + 1) * durationPerFrame)) {
             // Return the first frame as fallback
-            return new int[] { 0, 0, 0, frameWidth, frameHeight };
+            return new int[] {0, 0, 0, frameWidth, frameHeight};
         }
 
         final int framesPerStoryboard = framesPerPageX * framesPerPageY;

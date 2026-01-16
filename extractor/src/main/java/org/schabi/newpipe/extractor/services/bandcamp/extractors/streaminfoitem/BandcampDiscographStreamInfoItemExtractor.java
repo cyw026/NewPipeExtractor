@@ -1,29 +1,27 @@
 package org.schabi.newpipe.extractor.services.bandcamp.extractors.streaminfoitem;
 
 import com.grack.nanojson.JsonObject;
+import org.schabi.newpipe.extractor.Image;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.services.bandcamp.extractors.BandcampExtractorHelper;
 
-import javax.annotation.Nullable;
+import javax.annotation.Nonnull;
+import java.util.List;
+
+import static org.schabi.newpipe.extractor.services.bandcamp.extractors.BandcampExtractorHelper.getImagesFromImageId;
 
 public class BandcampDiscographStreamInfoItemExtractor extends BandcampStreamInfoItemExtractor {
 
     private final JsonObject discograph;
-    public BandcampDiscographStreamInfoItemExtractor(final JsonObject discograph, final String uploaderUrl) {
+    public BandcampDiscographStreamInfoItemExtractor(final JsonObject discograph,
+                                                     final String uploaderUrl) {
         super(uploaderUrl);
-
         this.discograph = discograph;
     }
 
     @Override
     public String getUploaderName() {
         return discograph.getString("band_name");
-    }
-
-    @Nullable
-    @Override
-    public String getUploaderAvatarUrl() {
-        return null;
     }
 
     @Override
@@ -40,11 +38,10 @@ public class BandcampDiscographStreamInfoItemExtractor extends BandcampStreamInf
         );
     }
 
+    @Nonnull
     @Override
-    public String getThumbnailUrl() throws ParsingException {
-        return BandcampExtractorHelper.getImageUrl(
-                discograph.getLong("art_id"), true
-        );
+    public List<Image> getThumbnails() throws ParsingException {
+        return getImagesFromImageId(discograph.getLong("art_id"), true);
     }
 
     @Override

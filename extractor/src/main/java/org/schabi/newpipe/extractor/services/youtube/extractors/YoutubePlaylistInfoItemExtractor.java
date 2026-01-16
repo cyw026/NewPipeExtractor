@@ -1,31 +1,44 @@
 package org.schabi.newpipe.extractor.services.youtube.extractors;
 
+import com.grack.nanojson.JsonArray;
 import com.grack.nanojson.JsonObject;
 
+import org.schabi.newpipe.extractor.Image;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.playlist.PlaylistInfoItemExtractor;
+import org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper;
 import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubePlaylistLinkHandlerFactory;
 import org.schabi.newpipe.extractor.utils.Utils;
 
-import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.fixThumbnailUrl;
+import javax.annotation.Nonnull;
+import java.util.List;
+
+import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.getImagesFromThumbnailsArray;
 import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.getTextFromObject;
+import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.getUrlFromObject;
 
 public class YoutubePlaylistInfoItemExtractor implements PlaylistInfoItemExtractor {
-    private JsonObject playlistInfoItem;
+    private final JsonObject playlistInfoItem;
 
-    public YoutubePlaylistInfoItemExtractor(JsonObject playlistInfoItem) {
+    public YoutubePlaylistInfoItemExtractor(final JsonObject playlistInfoItem) {
         this.playlistInfoItem = playlistInfoItem;
     }
 
+    @Nonnull
     @Override
-    public String getThumbnailUrl() throws ParsingException {
+    public List<Image> getThumbnails() throws ParsingException {
         try {
-            String url = playlistInfoItem.getArray("thumbnails").getObject(0)
-                    .getArray("thumbnails").getObject(0).getString("url");
+            JsonArray thumbnails = playlistInfoItem.getArray("thumbnails")
+                    .getObject(0)
+                    .getArray("thumbnails");
+            if (thumbnails.isEmpty()) {
+                thumbnails = playlistInfoItem.getObject("thumbnail")
+                        .getArray("thumbnails");
+            }
 
-            return fixThumbnailUrl(url);
-        } catch (Exception e) {
-            throw new ParsingException("Could not get thumbnail url", e);
+            return getImagesFromThumbnailsArray(thumbnails);
+        } catch (final Exception e) {
+            throw new ParsingException("Could not get thumbnails", e);
         }
     }
 
@@ -33,7 +46,7 @@ public class YoutubePlaylistInfoItemExtractor implements PlaylistInfoItemExtract
     public String getName() throws ParsingException {
         try {
             return getTextFromObject(playlistInfoItem.getObject("title"));
-        } catch (Exception e) {
+        } catch (final Exception e) {
             throw new ParsingException("Could not get name", e);
         }
     }
@@ -41,9 +54,9 @@ public class YoutubePlaylistInfoItemExtractor implements PlaylistInfoItemExtract
     @Override
     public String getUrl() throws ParsingException {
         try {
-            String id = playlistInfoItem.getString("playlistId");
+            final String id = playlistInfoItem.getString("playlistId");
             return YoutubePlaylistLinkHandlerFactory.getInstance().getUrl(id);
-        } catch (Exception e) {
+        } catch (final Exception e) {
             throw new ParsingException("Could not get url", e);
         }
     }
@@ -52,16 +65,47 @@ public class YoutubePlaylistInfoItemExtractor implements PlaylistInfoItemExtract
     public String getUploaderName() throws ParsingException {
         try {
             return getTextFromObject(playlistInfoItem.getObject("longBylineText"));
-        } catch (Exception e) {
+        } catch (final Exception e) {
             throw new ParsingException("Could not get uploader name", e);
         }
     }
 
     @Override
-    public long getStreamCount() throws ParsingException {
+    public String getUploaderUrl() throws ParsingException {
         try {
-            return Long.parseLong(Utils.removeNonDigitCharacters(playlistInfoItem.getString("videoCount")));
-        } catch (Exception e) {
+            return getUrlFromObject(playlistInfoItem.getObject("longBylineText"));
+        } catch (final Exception e) {
+            throw new ParsingException("Could not get uploader url", e);
+        }
+    }
+
+    @Override
+    public boolean isUploaderVerified() throws ParsingException {
+        try {
+            return YoutubeParsingHelper.isVerified(playlistInfoItem.getArray("ownerBadges"));
+        } catch (final Exception e) {
+            throw new ParsingException("Could not get uploader verification info", e);
+        }
+    }
+
+    @Override
+    public long getStreamCount() throws ParsingException {
+        String videoCountText = playlistInfoItem.getString("videoCount");
+        if (videoCountText == null) {
+            videoCountText = getTextFromObject(playlistInfoItem.getObject("videoCountText"));
+        }
+
+        if (videoCountText == null) {
+            videoCountText = getTextFromObject(playlistInfoItem.getObject("videoCountShortText"));
+        }
+
+        if (videoCountText == null) {
+            throw new ParsingException("Could not get stream count");
+        }
+
+        try {
+            return Long.parseLong(Utils.removeNonDigitCharacters(videoCountText));
+        } catch (final Exception e) {
             throw new ParsingException("Could not get stream count", e);
         }
     }

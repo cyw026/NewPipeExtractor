@@ -1,14 +1,14 @@
 package org.schabi.newpipe.extractor.services.peertube;
 
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-import org.schabi.newpipe.downloader.DownloaderTestImpl;
-import org.schabi.newpipe.extractor.NewPipe;
-import org.schabi.newpipe.extractor.exceptions.ParsingException;
-import org.schabi.newpipe.extractor.services.peertube.linkHandler.PeertubeCommentsLinkHandlerFactory;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.schabi.newpipe.extractor.services.peertube.PeertubeLinkHandlerFactoryTestHelper.assertDoNotAcceptNonURLs;
+
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.schabi.newpipe.extractor.InitNewPipeTest;
+import org.schabi.newpipe.extractor.exceptions.ParsingException;
+import org.schabi.newpipe.extractor.services.peertube.linkHandler.PeertubeCommentsLinkHandlerFactory;
 
 /**
  * Test for {@link PeertubeCommentsLinkHandlerFactory}
@@ -19,8 +19,8 @@ public class PeertubeCommentsLinkHandlerFactoryTest {
 
     @BeforeAll
     public static void setUp() {
+        InitNewPipeTest.initEmpty();
         linkHandler = PeertubeCommentsLinkHandlerFactory.getInstance();
-        NewPipe.init(DownloaderTestImpl.getInstance());
     }
 
     @Test
@@ -31,6 +31,8 @@ public class PeertubeCommentsLinkHandlerFactoryTest {
         assertTrue(linkHandler.acceptUrl("https://framatube.org/videos/watch/9c9de5e8-0a1e-484a-b099-e80766180a6d"));
         assertTrue(linkHandler.acceptUrl("https://framatube.org/w/9c9de5e8-0a1e-484a-b099-e80766180a6d"));
         assertTrue(linkHandler.acceptUrl("https://framatube.org/api/v1/videos/9c9de5e8-0a1e-484a-b099-e80766180a6d/comment-threads?start=0&count=10&sort=-createdAt"));
+
+        assertDoNotAcceptNonURLs(linkHandler);
     }
 
     @Test

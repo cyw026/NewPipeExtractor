@@ -1,14 +1,15 @@
 package org.schabi.newpipe.extractor.services.peertube;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.schabi.newpipe.extractor.ServiceList.PeerTube;
+
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.schabi.newpipe.downloader.DownloaderTestImpl;
-import org.schabi.newpipe.extractor.NewPipe;
+import org.schabi.newpipe.extractor.InitNewPipeTest;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.services.peertube.linkHandler.PeertubeStreamLinkHandlerFactory;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.schabi.newpipe.extractor.ServiceList.PeerTube;
 
 /**
  * Test for {@link PeertubeStreamLinkHandlerFactory}
@@ -19,9 +20,9 @@ public class PeertubeStreamLinkHandlerFactoryTest {
 
     @BeforeAll
     public static void setUp() {
+        InitNewPipeTest.initEmpty();
         PeerTube.setInstance(new PeertubeInstance("https://framatube.org", "Framatube"));
         linkHandler = PeertubeStreamLinkHandlerFactory.getInstance();
-        NewPipe.init(DownloaderTestImpl.getInstance());
     }
 
     @Test
@@ -71,5 +72,7 @@ public class PeertubeStreamLinkHandlerFactoryTest {
         // make sure playlists aren't accepted
         assertFalse(linkHandler.acceptUrl("https://framatube.org/w/p/dacdc4ef-5160-4846-9b70-a655880da667"));
         assertFalse(linkHandler.acceptUrl("https://framatube.org/videos/watch/playlist/dacdc4ef-5160-4846-9b70-a655880da667"));
+
+        PeertubeLinkHandlerFactoryTestHelper.assertDoNotAcceptNonURLs(linkHandler);
     }
 }

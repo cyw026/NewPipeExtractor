@@ -1,13 +1,19 @@
 package org.schabi.newpipe.extractor.services.soundcloud.extractors;
 
 import com.grack.nanojson.JsonObject;
+import org.schabi.newpipe.extractor.Image;
 import org.schabi.newpipe.extractor.comments.CommentsInfoItemExtractor;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.localization.DateWrapper;
-import org.schabi.newpipe.extractor.services.soundcloud.SoundcloudParsingHelper;
+import org.schabi.newpipe.extractor.stream.Description;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Objects;
+
+import static org.schabi.newpipe.extractor.services.soundcloud.SoundcloudParsingHelper.getAllImagesFromArtworkOrAvatarUrl;
+import static org.schabi.newpipe.extractor.services.soundcloud.SoundcloudParsingHelper.parseDate;
 
 public class SoundcloudCommentsInfoItemExtractor implements CommentsInfoItemExtractor {
     private final JsonObject json;
@@ -23,9 +29,10 @@ public class SoundcloudCommentsInfoItemExtractor implements CommentsInfoItemExtr
         return Objects.toString(json.getLong("id"), null);
     }
 
+    @Nonnull
     @Override
-    public String getCommentText() {
-        return json.getString("body");
+    public Description getCommentText() {
+        return new Description(json.getString("body"), Description.PLAIN_TEXT);
     }
 
     @Override
@@ -33,9 +40,10 @@ public class SoundcloudCommentsInfoItemExtractor implements CommentsInfoItemExtr
         return json.getObject("user").getString("username");
     }
 
+    @Nonnull
     @Override
-    public String getUploaderAvatarUrl() {
-        return json.getObject("user").getString("avatar_url");
+    public List<Image> getUploaderAvatars() {
+        return getAllImagesFromArtworkOrAvatarUrl(json.getObject("user").getString("avatar_url"));
     }
 
     @Override
@@ -44,7 +52,7 @@ public class SoundcloudCommentsInfoItemExtractor implements CommentsInfoItemExtr
     }
 
     @Override
-    public int getStreamPosition() throws ParsingException {
+    public int getStreamPosition() {
         return json.getInt("timestamp") / 1000; // convert milliseconds to seconds
     }
 
@@ -61,7 +69,7 @@ public class SoundcloudCommentsInfoItemExtractor implements CommentsInfoItemExtr
     @Nullable
     @Override
     public DateWrapper getUploadDate() throws ParsingException {
-        return new DateWrapper(SoundcloudParsingHelper.parseDateFrom(getTextualUploadDate()));
+        return parseDate(getTextualUploadDate());
     }
 
     @Override
@@ -74,8 +82,9 @@ public class SoundcloudCommentsInfoItemExtractor implements CommentsInfoItemExtr
         return url;
     }
 
+    @Nonnull
     @Override
-    public String getThumbnailUrl() {
-        return json.getObject("user").getString("avatar_url");
+    public List<Image> getThumbnails() {
+        return getAllImagesFromArtworkOrAvatarUrl(json.getObject("user").getString("avatar_url"));
     }
 }

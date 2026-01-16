@@ -1,7 +1,28 @@
+/*
+ * Created by Christian Schabesberger on 12.02.17.
+ *
+ * Copyright (C) 2017 Christian Schabesberger <chris.schabesberger@mailbox.org>
+ * YoutubeChannelInfoItemExtractor.java is part of NewPipe Extractor.
+ *
+ * NewPipe Extractor is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * NewPipe Extractor is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with NewPipe Extractor. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package org.schabi.newpipe.extractor.services.youtube.extractors;
 
 import com.grack.nanojson.JsonObject;
 
+import org.schabi.newpipe.extractor.Image;
 import org.schabi.newpipe.extractor.ListExtractor;
 import org.schabi.newpipe.extractor.channel.ChannelInfoItemExtractor;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
@@ -9,44 +30,40 @@ import org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper;
 import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeChannelLinkHandlerFactory;
 import org.schabi.newpipe.extractor.utils.Utils;
 
-import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.fixThumbnailUrl;
-import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.getTextFromObject;
+import javax.annotation.Nonnull;
+import java.util.List;
 
-/*
- * Created by Christian Schabesberger on 12.02.17.
- *
- * Copyright (C) Christian Schabesberger 2017 <chris.schabesberger@mailbox.org>
- * YoutubeChannelInfoItemExtractor.java is part of NewPipe.
- *
- * NewPipe is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * NewPipe is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with NewPipe.  If not, see <http://www.gnu.org/licenses/>.
- */
+import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.getTextFromObject;
+import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.getThumbnailsFromInfoItem;
 
 public class YoutubeChannelInfoItemExtractor implements ChannelInfoItemExtractor {
-    private JsonObject channelInfoItem;
+    private final JsonObject channelInfoItem;
+    /**
+     * New layout:
+     * "subscriberCountText": Channel handle
+     * "videoCountText": Subscriber count
+     */
+    private final boolean withHandle;
 
-    public YoutubeChannelInfoItemExtractor(JsonObject channelInfoItem) {
+    public YoutubeChannelInfoItemExtractor(final JsonObject channelInfoItem) {
         this.channelInfoItem = channelInfoItem;
+
+        boolean wHandle = false;
+        final String subscriberCountText = getTextFromObject(
+                channelInfoItem.getObject("subscriberCountText"));
+        if (subscriberCountText != null) {
+            wHandle = subscriberCountText.startsWith("@");
+        }
+        this.withHandle = wHandle;
     }
 
+    @Nonnull
     @Override
-    public String getThumbnailUrl() throws ParsingException {
+    public List<Image> getThumbnails() throws ParsingException {
         try {
-            String url = channelInfoItem.getObject("thumbnail").getArray("thumbnails").getObject(0).getString("url");
-
-            return fixThumbnailUrl(url);
-        } catch (Exception e) {
-            throw new ParsingException("Could not get thumbnail url", e);
+            return getThumbnailsFromInfoItem(channelInfoItem);
+        } catch (final Exception e) {
+            throw new ParsingException("Could not get thumbnails", e);
         }
     }
 
@@ -54,7 +71,7 @@ public class YoutubeChannelInfoItemExtractor implements ChannelInfoItemExtractor
     public String getName() throws ParsingException {
         try {
             return getTextFromObject(channelInfoItem.getObject("title"));
-        } catch (Exception e) {
+        } catch (final Exception e) {
             throw new ParsingException("Could not get name", e);
         }
     }
@@ -62,9 +79,9 @@ public class YoutubeChannelInfoItemExtractor implements ChannelInfoItemExtractor
     @Override
     public String getUrl() throws ParsingException {
         try {
-            String id = "channel/" + channelInfoItem.getString("channelId");
+            final String id = "channel/" + channelInfoItem.getString("channelId");
             return YoutubeChannelLinkHandlerFactory.getInstance().getUrl(id);
-        } catch (Exception e) {
+        } catch (final Exception e) {
             throw new ParsingException("Could not get url", e);
         }
     }
@@ -77,8 +94,18 @@ public class YoutubeChannelInfoItemExtractor implements ChannelInfoItemExtractor
                 return -1;
             }
 
-            return Utils.mixedNumberWordToLong(getTextFromObject(channelInfoItem.getObject("subscriberCountText")));
-        } catch (Exception e) {
+            if (withHandle) {
+                if (channelInfoItem.has("videoCountText")) {
+                    return Utils.mixedNumberWordToLong(getTextFromObject(
+                            channelInfoItem.getObject("videoCountText")));
+                } else {
+                    return -1;
+                }
+            }
+
+            return Utils.mixedNumberWordToLong(getTextFromObject(
+                    channelInfoItem.getObject("subscriberCountText")));
+        } catch (final Exception e) {
             throw new ParsingException("Could not get subscriber count", e);
         }
     }
@@ -86,14 +113,15 @@ public class YoutubeChannelInfoItemExtractor implements ChannelInfoItemExtractor
     @Override
     public long getStreamCount() throws ParsingException {
         try {
-            if (!channelInfoItem.has("videoCountText")) {
-                // Video count is not available, channel probably has no public uploads.
+            if (withHandle || !channelInfoItem.has("videoCountText")) {
+                // Video count is not available, either the channel has no public uploads
+                // or YouTube displays the channel handle instead.
                 return ListExtractor.ITEM_COUNT_UNKNOWN;
             }
 
             return Long.parseLong(Utils.removeNonDigitCharacters(getTextFromObject(
                     channelInfoItem.getObject("videoCountText"))));
-        } catch (Exception e) {
+        } catch (final Exception e) {
             throw new ParsingException("Could not get stream count", e);
         }
     }
@@ -112,7 +140,7 @@ public class YoutubeChannelInfoItemExtractor implements ChannelInfoItemExtractor
             }
 
             return getTextFromObject(channelInfoItem.getObject("descriptionSnippet"));
-        } catch (Exception e) {
+        } catch (final Exception e) {
             throw new ParsingException("Could not get description", e);
         }
     }

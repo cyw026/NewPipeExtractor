@@ -1,9 +1,13 @@
 package org.schabi.newpipe.extractor.services.soundcloud.extractors;
 
 import com.grack.nanojson.JsonObject;
+import org.schabi.newpipe.extractor.Image;
 import org.schabi.newpipe.extractor.channel.ChannelInfoItemExtractor;
 
-import static org.schabi.newpipe.extractor.utils.Utils.EMPTY_STRING;
+import javax.annotation.Nonnull;
+import java.util.List;
+
+import static org.schabi.newpipe.extractor.services.soundcloud.SoundcloudParsingHelper.getAllImagesFromArtworkOrAvatarUrl;
 import static org.schabi.newpipe.extractor.utils.Utils.replaceHttpWithHttps;
 
 public class SoundcloudChannelInfoItemExtractor implements ChannelInfoItemExtractor {
@@ -23,11 +27,10 @@ public class SoundcloudChannelInfoItemExtractor implements ChannelInfoItemExtrac
         return replaceHttpWithHttps(itemObject.getString("permalink_url"));
     }
 
+    @Nonnull
     @Override
-    public String getThumbnailUrl() {
-        String avatarUrl = itemObject.getString("avatar_url", EMPTY_STRING);
-        // An avatar URL with a better resolution
-        return avatarUrl.replace("large.jpg", "crop.jpg");
+    public List<Image> getThumbnails() {
+        return getAllImagesFromArtworkOrAvatarUrl(itemObject.getString("avatar_url"));
     }
 
     @Override
@@ -47,6 +50,6 @@ public class SoundcloudChannelInfoItemExtractor implements ChannelInfoItemExtrac
 
     @Override
     public String getDescription() {
-        return itemObject.getString("description", EMPTY_STRING);
+        return itemObject.getString("description", "");
     }
 }

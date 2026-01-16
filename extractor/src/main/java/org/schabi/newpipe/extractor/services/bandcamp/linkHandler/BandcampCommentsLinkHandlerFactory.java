@@ -3,6 +3,7 @@ package org.schabi.newpipe.extractor.services.bandcamp.linkHandler;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.linkhandler.ListLinkHandlerFactory;
 import org.schabi.newpipe.extractor.services.bandcamp.extractors.BandcampExtractorHelper;
+import org.schabi.newpipe.extractor.utils.Utils;
 
 import java.util.List;
 
@@ -10,24 +11,43 @@ import java.util.List;
  * Like in {@link BandcampStreamLinkHandlerFactory}, tracks have no meaningful IDs except for
  * their URLs
  */
-public class BandcampCommentsLinkHandlerFactory extends ListLinkHandlerFactory {
+public final class BandcampCommentsLinkHandlerFactory extends ListLinkHandlerFactory {
 
-    @Override
-    public String getId(String url) throws ParsingException {
-        return url;
+    private static final BandcampCommentsLinkHandlerFactory INSTANCE
+            = new BandcampCommentsLinkHandlerFactory();
+
+    private BandcampCommentsLinkHandlerFactory() {
+    }
+
+    public static BandcampCommentsLinkHandlerFactory getInstance() {
+        return INSTANCE;
     }
 
     @Override
-    public boolean onAcceptUrl(String url) throws ParsingException {
+    public String getId(final String url) throws ParsingException, UnsupportedOperationException {
+        return Utils.replaceHttpWithHttps(url);
+    }
+
+    @Override
+    public boolean onAcceptUrl(final String url) throws ParsingException {
+        if (BandcampExtractorHelper.isRadioUrl(url)) {
+            return true;
+        }
+
         // Don't accept URLs that don't point to a track
-        if (!url.toLowerCase().matches("https?://.+\\..+/(track|album)/.+")) return false;
+        if (!url.toLowerCase().matches("https?://.+\\..+/(track|album)/.+")) {
+            return false;
+        }
 
         // Test whether domain is supported
-        return BandcampExtractorHelper.isSupportedDomain(url);
+        return BandcampExtractorHelper.isArtistDomain(url);
     }
 
     @Override
-    public String getUrl(String id, List<String> contentFilter, String sortFilter) throws ParsingException {
-        return id;
+    public String getUrl(final String id,
+                         final List<String> contentFilter,
+                         final String sortFilter)
+            throws ParsingException, UnsupportedOperationException {
+        return Utils.replaceHttpWithHttps(id);
     }
 }

@@ -9,19 +9,23 @@ import java.util.List;
 
 import static org.schabi.newpipe.extractor.services.soundcloud.SoundcloudParsingHelper.clientId;
 
-public class SoundcloudCommentsLinkHandlerFactory extends ListLinkHandlerFactory {
+public final class SoundcloudCommentsLinkHandlerFactory extends ListLinkHandlerFactory {
 
-    private static final SoundcloudCommentsLinkHandlerFactory instance =
+    private static final SoundcloudCommentsLinkHandlerFactory INSTANCE =
             new SoundcloudCommentsLinkHandlerFactory();
 
+    private SoundcloudCommentsLinkHandlerFactory() {
+    }
+
     public static SoundcloudCommentsLinkHandlerFactory getInstance() {
-        return instance;
+        return INSTANCE;
     }
 
     @Override
     public String getUrl(final String id,
                          final List<String> contentFilter,
-                         final String sortFilter) throws ParsingException {
+                         final String sortFilter)
+            throws ParsingException, UnsupportedOperationException {
         try {
             return "https://api-v2.soundcloud.com/tracks/" + id + "/comments" + "?client_id="
                     + clientId() + "&threaded=0" + "&filter_replies=1";
@@ -34,7 +38,7 @@ public class SoundcloudCommentsLinkHandlerFactory extends ListLinkHandlerFactory
     }
 
     @Override
-    public String getId(final String url) throws ParsingException {
+    public String getId(final String url) throws ParsingException, UnsupportedOperationException {
         // Delegation to avoid duplicate code, as we need the same id
         return SoundcloudStreamLinkHandlerFactory.getInstance().getId(url);
     }

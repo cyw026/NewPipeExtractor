@@ -18,7 +18,7 @@ public class BandcampFeaturedLinkHandlerFactoryTest {
 
     @BeforeAll
     public static void setUp() {
-        linkHandler = new BandcampFeaturedLinkHandlerFactory();
+        linkHandler = BandcampFeaturedLinkHandlerFactory.getInstance();
     }
 
 
@@ -28,7 +28,7 @@ public class BandcampFeaturedLinkHandlerFactoryTest {
         assertTrue(linkHandler.acceptUrl("https://bandcamp.com/?show=1"));
         assertTrue(linkHandler.acceptUrl("http://bandcamp.com/?show=2"));
         assertTrue(linkHandler.acceptUrl("https://bandcamp.com/api/mobile/24/bootstrap_data"));
-        assertTrue(linkHandler.acceptUrl("https://bandcamp.com/api/bcweekly/1/list"));
+        assertTrue(linkHandler.acceptUrl("https://bandcamp.com/api/bcweekly/3/list"));
 
         assertFalse(linkHandler.acceptUrl("https://bandcamp.com/?show="));
         assertFalse(linkHandler.acceptUrl("https://bandcamp.com/?show=a"));
@@ -38,15 +38,15 @@ public class BandcampFeaturedLinkHandlerFactoryTest {
     @Test
     public void testGetUrl() throws ParsingException {
         assertEquals("https://bandcamp.com/api/mobile/24/bootstrap_data", linkHandler.getUrl("Featured"));
-        assertEquals("https://bandcamp.com/api/bcweekly/1/list", linkHandler.getUrl("Radio"));
+        assertEquals("https://bandcamp.com/api/bcweekly/3/list", linkHandler.getUrl("Radio"));
     }
 
     @Test
-    public void testGetId() {
+    public void testGetId() throws ParsingException {
         assertEquals("Featured", linkHandler.getId("http://bandcamp.com/api/mobile/24/bootstrap_data"));
         assertEquals("Featured", linkHandler.getId("https://bandcamp.com/api/mobile/24/bootstrap_data"));
         assertEquals("Radio", linkHandler.getId("http://bandcamp.com/?show=1"));
-        assertEquals("Radio", linkHandler.getId("https://bandcamp.com/api/bcweekly/1/list"));
+        assertEquals("Radio", linkHandler.getId("https://bandcamp.com/api/bcweekly/3/list"));
     }
 
 }

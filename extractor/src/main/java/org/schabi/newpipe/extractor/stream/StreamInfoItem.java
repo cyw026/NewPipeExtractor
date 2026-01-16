@@ -1,32 +1,35 @@
-package org.schabi.newpipe.extractor.stream;
-
 /*
  * Created by Christian Schabesberger on 26.08.15.
  *
- * Copyright (C) Christian Schabesberger 2016 <chris.schabesberger@mailbox.org>
- * StreamInfoItem.java is part of NewPipe.
+ * Copyright (C) 2016 Christian Schabesberger <chris.schabesberger@mailbox.org>
+ * StreamInfoItem.java is part of NewPipe Extractor.
  *
- * NewPipe is free software: you can redistribute it and/or modify
+ * NewPipe Extractor is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * NewPipe is distributed in the hope that it will be useful,
+ * NewPipe Extractor is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with NewPipe.  If not, see <http://www.gnu.org/licenses/>.
+ * along with NewPipe Extractor.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+package org.schabi.newpipe.extractor.stream;
+
+import org.schabi.newpipe.extractor.Image;
 import org.schabi.newpipe.extractor.InfoItem;
 import org.schabi.newpipe.extractor.localization.DateWrapper;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.List;
 
 /**
- * Info object for previews of unopened videos, eg search results, related videos
+ * Info object for previews of unopened videos, e.g. search results, related videos.
  */
 public class StreamInfoItem extends InfoItem {
     private final StreamType streamType;
@@ -40,10 +43,17 @@ public class StreamInfoItem extends InfoItem {
     private long duration = -1;
 
     private String uploaderUrl = null;
-    private String uploaderAvatarUrl = null;
+    @Nonnull
+    private List<Image> uploaderAvatars = List.of();
     private boolean uploaderVerified = false;
+    private boolean shortFormContent = false;
+    @Nonnull
+    private ContentAvailability contentAvailability = ContentAvailability.AVAILABLE;
 
-    public StreamInfoItem(int serviceId, String url, String name, StreamType streamType) {
+    public StreamInfoItem(final int serviceId,
+                          final String url,
+                          final String name,
+                          final StreamType streamType) {
         super(InfoType.STREAM, serviceId, url, name);
         this.streamType = streamType;
     }
@@ -56,23 +66,23 @@ public class StreamInfoItem extends InfoItem {
         return uploaderName;
     }
 
-    public void setUploaderName(String uploader_name) {
-        this.uploaderName = uploader_name;
+    public void setUploaderName(final String uploaderName) {
+        this.uploaderName = uploaderName;
     }
 
     public long getViewCount() {
         return viewCount;
     }
 
-    public void setViewCount(long view_count) {
-        this.viewCount = view_count;
+    public void setViewCount(final long viewCount) {
+        this.viewCount = viewCount;
     }
 
     public long getDuration() {
         return duration;
     }
 
-    public void setDuration(long duration) {
+    public void setDuration(final long duration) {
         this.duration = duration;
     }
 
@@ -80,17 +90,17 @@ public class StreamInfoItem extends InfoItem {
         return uploaderUrl;
     }
 
-    public void setUploaderUrl(String uploaderUrl) {
+    public void setUploaderUrl(final String uploaderUrl) {
         this.uploaderUrl = uploaderUrl;
     }
 
-    @Nullable
-    public String getUploaderAvatarUrl() {
-        return uploaderAvatarUrl;
+    @Nonnull
+    public List<Image> getUploaderAvatars() {
+        return uploaderAvatars;
     }
 
-    public void setUploaderAvatarUrl(final String uploaderAvatarUrl) {
-        this.uploaderAvatarUrl = uploaderAvatarUrl;
+    public void setUploaderAvatars(@Nonnull final List<Image> uploaderAvatars) {
+        this.uploaderAvatars = uploaderAvatars;
     }
 
     public String getShortDescription() {
@@ -106,8 +116,8 @@ public class StreamInfoItem extends InfoItem {
         return textualUploadDate;
     }
 
-    public void setTextualUploadDate(String uploadDate) {
-        this.textualUploadDate = uploadDate;
+    public void setTextualUploadDate(final String textualUploadDate) {
+        this.textualUploadDate = textualUploadDate;
     }
 
     @Nullable
@@ -115,7 +125,7 @@ public class StreamInfoItem extends InfoItem {
         return uploadDate;
     }
 
-    public void setUploadDate(@Nullable DateWrapper uploadDate) {
+    public void setUploadDate(@Nullable final DateWrapper uploadDate) {
         this.uploadDate = uploadDate;
     }
 
@@ -123,25 +133,50 @@ public class StreamInfoItem extends InfoItem {
         return uploaderVerified;
     }
 
-    public void setUploaderVerified(boolean uploaderVerified) {
+    public void setUploaderVerified(final boolean uploaderVerified) {
         this.uploaderVerified = uploaderVerified;
+    }
+
+    public boolean isShortFormContent() {
+        return shortFormContent;
+    }
+
+    public void setShortFormContent(final boolean shortFormContent) {
+        this.shortFormContent = shortFormContent;
+    }
+
+    /**
+     * Gets the availability of the content.
+     *
+     * @return The availability of the stream.
+     */
+    @Nonnull
+    public ContentAvailability getContentAvailability() {
+        return contentAvailability;
+    }
+
+    /**
+     * Sets the availability of the Stream.
+     */
+    public void setContentAvailability(@Nonnull final ContentAvailability availability) {
+        this.contentAvailability = availability;
     }
 
     @Override
     public String toString() {
-        return "StreamInfoItem{" +
-                "streamType=" + streamType +
-                ", uploaderName='" + uploaderName + '\'' +
-                ", textualUploadDate='" + textualUploadDate + '\'' +
-                ", viewCount=" + viewCount +
-                ", duration=" + duration +
-                ", uploaderUrl='" + uploaderUrl + '\'' +
-                ", infoType=" + getInfoType() +
-                ", serviceId=" + getServiceId() +
-                ", url='" + getUrl() + '\'' +
-                ", name='" + getName() + '\'' +
-                ", thumbnailUrl='" + getThumbnailUrl() + '\'' +
-                ", uploaderVerified='" + isUploaderVerified() + '\'' +
-                '}';
+        return "StreamInfoItem{"
+                + "streamType=" + streamType
+                + ", uploaderName='" + uploaderName + '\''
+                + ", textualUploadDate='" + textualUploadDate + '\''
+                + ", viewCount=" + viewCount
+                + ", duration=" + duration
+                + ", uploaderUrl='" + uploaderUrl + '\''
+                + ", infoType=" + getInfoType()
+                + ", serviceId=" + getServiceId()
+                + ", url='" + getUrl() + '\''
+                + ", name='" + getName() + '\''
+                + ", thumbnails='" + getThumbnails() + '\''
+                + ", uploaderVerified='" + isUploaderVerified() + '\''
+                + '}';
     }
 }

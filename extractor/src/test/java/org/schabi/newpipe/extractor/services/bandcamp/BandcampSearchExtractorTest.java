@@ -2,10 +2,15 @@
 
 package org.schabi.newpipe.extractor.services.bandcamp;
 
-import org.junit.jupiter.api.BeforeAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.schabi.newpipe.extractor.ServiceList.Bandcamp;
+
 import org.junit.jupiter.api.Test;
-import org.schabi.newpipe.downloader.DownloaderTestImpl;
-import org.schabi.newpipe.extractor.*;
+import org.schabi.newpipe.extractor.InfoItem;
+import org.schabi.newpipe.extractor.InitNewPipeTest;
+import org.schabi.newpipe.extractor.ListExtractor;
+import org.schabi.newpipe.extractor.Page;
+import org.schabi.newpipe.extractor.StreamingService;
 import org.schabi.newpipe.extractor.exceptions.ExtractionException;
 import org.schabi.newpipe.extractor.playlist.PlaylistInfoItem;
 import org.schabi.newpipe.extractor.search.SearchExtractor;
@@ -13,30 +18,21 @@ import org.schabi.newpipe.extractor.services.DefaultSearchExtractorTest;
 import org.schabi.newpipe.extractor.services.bandcamp.extractors.BandcampSearchExtractor;
 import org.schabi.newpipe.extractor.stream.StreamInfoItem;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.schabi.newpipe.extractor.ServiceList.Bandcamp;
+import javax.annotation.Nullable;
 
 /**
  * Test for {@link BandcampSearchExtractor}
  */
-public class BandcampSearchExtractorTest {
-
-    @BeforeAll
-    public static void setUp() {
-        NewPipe.init(DownloaderTestImpl.getInstance());
-
-    }
+public class BandcampSearchExtractorTest implements InitNewPipeTest {
 
     /**
      * Tests whether searching bandcamp for "best friend's basement" returns
      * the accordingly named song by Zach Benson
      */
     @Test
-    public void testStreamSearch() throws ExtractionException, IOException {
+    void testStreamSearch() throws ExtractionException, IOException {
         final SearchExtractor extractor = Bandcamp.getSearchExtractor("best friend's basement");
 
         final ListExtractor.InfoItemsPage<InfoItem> page = extractor.getInitialPage();
@@ -45,8 +41,7 @@ public class BandcampSearchExtractorTest {
         // The track by Zach Benson should be the first result, no?
         assertEquals("Best Friend's Basement", bestFriendsBasement.getName());
         assertEquals("Zach Benson", bestFriendsBasement.getUploaderName());
-        assertTrue(bestFriendsBasement.getThumbnailUrl().endsWith(".jpg"));
-        assertTrue(bestFriendsBasement.getThumbnailUrl().contains("f4.bcbits.com/img/"));
+        BandcampTestUtils.testImages(bestFriendsBasement.getThumbnails());
         assertEquals(InfoItem.InfoType.STREAM, bestFriendsBasement.getInfoType());
     }
 
@@ -54,44 +49,41 @@ public class BandcampSearchExtractorTest {
      * Tests whether searching bandcamp for "C418" returns the artist's profile
      */
     @Test
-    public void testChannelSearch() throws ExtractionException, IOException {
+    void testChannelSearch() throws ExtractionException, IOException {
         final SearchExtractor extractor = Bandcamp.getSearchExtractor("C418");
         final InfoItem c418 = extractor.getInitialPage()
                 .getItems().get(0);
 
         // C418's artist profile should be the first result, no?
         assertEquals("C418", c418.getName());
-        assertTrue(c418.getThumbnailUrl().endsWith(".jpg"));
-        assertTrue(c418.getThumbnailUrl().contains("f4.bcbits.com/img/"));
+        BandcampTestUtils.testImages(c418.getThumbnails());
         assertEquals("https://c418.bandcamp.com", c418.getUrl());
-
     }
 
     /**
      * Tests whether searching bandcamp for "minecraft volume alpha" returns the corresponding album
      */
     @Test
-    public void testAlbumSearch() throws ExtractionException, IOException {
+    void testAlbumSearch() throws ExtractionException, IOException {
         final SearchExtractor extractor = Bandcamp.getSearchExtractor("minecraft volume alpha");
-        InfoItem minecraft = extractor.getInitialPage()
-                .getItems().get(0);
+        final InfoItem minecraft = extractor.getInitialPage().getItems().get(0);
 
         // Minecraft volume alpha should be the first result, no?
         assertEquals("Minecraft - Volume Alpha", minecraft.getName());
-        assertTrue(minecraft.getThumbnailUrl().endsWith(".jpg"));
-        assertTrue(minecraft.getThumbnailUrl().contains("f4.bcbits.com/img/"));
-        assertEquals("https://c418.bandcamp.com/album/minecraft-volume-alpha", minecraft.getUrl());
+        BandcampTestUtils.testImages(minecraft.getThumbnails());
+        assertEquals(
+                "https://c418.bandcamp.com/album/minecraft-volume-alpha",
+                minecraft.getUrl());
 
         // Verify that playlist tracks counts get extracted correctly
         assertEquals(24, ((PlaylistInfoItem) minecraft).getStreamCount());
-
     }
 
     /**
      * Tests searches with multiple pages
      */
     @Test
-    public void testMultiplePages() throws ExtractionException, IOException {
+    void testMultiplePages() throws ExtractionException, IOException {
         // A query practically guaranteed to have the maximum amount of pages
         final SearchExtractor extractor = Bandcamp.getSearchExtractor("e");
 
@@ -103,17 +95,13 @@ public class BandcampSearchExtractorTest {
     }
 
     public static class DefaultTest extends DefaultSearchExtractorTest {
-        private static SearchExtractor extractor;
         private static final String QUERY = "noise";
 
-        @BeforeAll
-        public static void setUp() throws Exception {
-            NewPipe.init(DownloaderTestImpl.getInstance());
-            extractor = Bandcamp.getSearchExtractor(QUERY);
-            extractor.fetchPage();
+        @Override
+        protected SearchExtractor createExtractor() throws Exception {
+            return Bandcamp.getSearchExtractor(QUERY);
         }
 
-        @Override public SearchExtractor extractor() { return extractor; }
         @Override public StreamingService expectedService() { return Bandcamp; }
         @Override public String expectedName() { return QUERY; }
         @Override public String expectedId() { return QUERY; }

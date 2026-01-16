@@ -2,12 +2,11 @@
 
 package org.schabi.newpipe.extractor.services.bandcamp;
 
-import org.junit.jupiter.api.BeforeAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.schabi.newpipe.extractor.ServiceList.Bandcamp;
+
 import org.junit.jupiter.api.Test;
-import org.schabi.newpipe.downloader.DownloaderTestImpl;
-import org.schabi.newpipe.extractor.NewPipe;
 import org.schabi.newpipe.extractor.StreamingService;
-import org.schabi.newpipe.extractor.exceptions.ExtractionException;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.services.DefaultStreamExtractorTest;
 import org.schabi.newpipe.extractor.services.bandcamp.extractors.BandcampExtractorHelper;
@@ -15,33 +14,18 @@ import org.schabi.newpipe.extractor.services.bandcamp.extractors.BandcampStreamE
 import org.schabi.newpipe.extractor.stream.StreamExtractor;
 import org.schabi.newpipe.extractor.stream.StreamType;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.schabi.newpipe.extractor.ServiceList.Bandcamp;
 
 /**
  * Tests for {@link BandcampStreamExtractor}
  */
 public class BandcampStreamExtractorTest extends DefaultStreamExtractorTest {
 
-    private static BandcampStreamExtractor extractor;
-
-    @BeforeAll
-    public static void setUp() throws ExtractionException, IOException {
-        NewPipe.init(DownloaderTestImpl.getInstance());
-
-        extractor = (BandcampStreamExtractor) Bandcamp
-                .getStreamExtractor("https://teaganbear.bandcamp.com/track/just-for-the-halibut-creative-commons-attribution");
-        extractor.fetchPage();
-    }
-
     @Override
-    public StreamExtractor extractor() {
-        return extractor;
+    protected StreamExtractor createExtractor() throws Exception {
+        return Bandcamp
+            .getStreamExtractor("https://teaganbear.bandcamp.com/track/just-for-the-halibut");
     }
 
     @Override
@@ -51,22 +35,22 @@ public class BandcampStreamExtractorTest extends DefaultStreamExtractorTest {
 
     @Override
     public String expectedName() {
-        return "Just for the Halibut [Creative Commons: Attribution]";
+        return "Just for the Halibut";
     }
 
     @Override
     public String expectedId() {
-        return "https://teaganbear.bandcamp.com/track/just-for-the-halibut-creative-commons-attribution";
+        return "https://teaganbear.bandcamp.com/track/just-for-the-halibut";
     }
 
     @Override
     public String expectedUrlContains() {
-        return "https://teaganbear.bandcamp.com/track/just-for-the-halibut-creative-commons-attribution";
+        return "https://teaganbear.bandcamp.com/track/just-for-the-halibut";
     }
 
     @Override
     public String expectedOriginalUrlContains() {
-        return "https://teaganbear.bandcamp.com/track/just-for-the-halibut-creative-commons-attribution";
+        return "https://teaganbear.bandcamp.com/track/just-for-the-halibut";
     }
 
     @Override
@@ -91,7 +75,7 @@ public class BandcampStreamExtractorTest extends DefaultStreamExtractorTest {
 
     @Override
     public long expectedLength() {
-        return 0;
+        return 124;
     }
 
     @Override
@@ -150,16 +134,15 @@ public class BandcampStreamExtractorTest extends DefaultStreamExtractorTest {
     }
 
     @Test
-    public void testArtistProfilePicture() throws Exception {
-        final String url = extractor().getUploaderAvatarUrl();
-        assertTrue(url.contains("://f4.bcbits.com/img/") && url.endsWith(".jpg"));
+    void testArtistProfilePictures() throws ParsingException {
+        BandcampTestUtils.testImages(extractor().getUploaderAvatars());
     }
 
     @Test
-    public void testTranslateIdsToUrl() throws ParsingException {
+    void testTranslateIdsToUrl() throws ParsingException {
         // To add tests: look at website's source, search for `band_id` and `item_id`
         assertEquals(
-                "https://teaganbear.bandcamp.com/track/just-for-the-halibut-creative-commons-attribution",
+                "https://teaganbear.bandcamp.com/track/just-for-the-halibut",
                 BandcampExtractorHelper.getStreamUrlFromIds(3877364987L, 3486455278L, "track")
         );
     }

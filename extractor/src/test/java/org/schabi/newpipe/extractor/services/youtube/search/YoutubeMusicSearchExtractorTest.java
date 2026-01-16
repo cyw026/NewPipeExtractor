@@ -1,177 +1,151 @@
 package org.schabi.newpipe.extractor.services.youtube.search;
 
-import org.junit.jupiter.api.BeforeAll;
+import static org.schabi.newpipe.extractor.ServiceList.YouTube;
+import static java.util.Collections.singletonList;
+
 import org.junit.jupiter.api.Disabled;
-import org.schabi.newpipe.downloader.DownloaderTestImpl;
 import org.schabi.newpipe.extractor.InfoItem;
-import org.schabi.newpipe.extractor.NewPipe;
 import org.schabi.newpipe.extractor.StreamingService;
 import org.schabi.newpipe.extractor.search.SearchExtractor;
 import org.schabi.newpipe.extractor.services.DefaultSearchExtractorTest;
+import org.schabi.newpipe.extractor.services.youtube.InitYoutubeTest;
 import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeSearchQueryHandlerFactory;
 
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 import javax.annotation.Nullable;
 
-import static java.util.Collections.singletonList;
-import static org.schabi.newpipe.extractor.ServiceList.YouTube;
-
 // Doesn't work with mocks. Makes request with different `dataToSend` I think
 public class YoutubeMusicSearchExtractorTest {
-    public static class MusicSongs extends DefaultSearchExtractorTest {
-        private static SearchExtractor extractor;
+    private static final String BASE_SEARCH_URL = "music.youtube.com/search?q=";
+
+    public static class MusicSongs extends DefaultSearchExtractorTest implements InitYoutubeTest {
         private static final String QUERY = "mocromaniac";
 
-        @BeforeAll
-        public static void setUp() throws Exception {
-            NewPipe.init(DownloaderTestImpl.getInstance());
-            extractor = YouTube.getSearchExtractor(QUERY, singletonList(YoutubeSearchQueryHandlerFactory.MUSIC_SONGS), "");
-            extractor.fetchPage();
+        @Override
+        protected SearchExtractor createExtractor() throws Exception {
+            return YouTube.getSearchExtractor(QUERY, singletonList(YoutubeSearchQueryHandlerFactory.MUSIC_SONGS), "");
         }
 
-        @Override public SearchExtractor extractor() { return extractor; }
         @Override public StreamingService expectedService() { return YouTube; }
         @Override public String expectedName() { return QUERY; }
         @Override public String expectedId() { return QUERY; }
-        @Override public String expectedUrlContains() { return "music.youtube.com/search?q=" + QUERY; }
-        @Override public String expectedOriginalUrlContains() { return "music.youtube.com/search?q=" + QUERY; }
+        @Override public String expectedUrlContains() { return BASE_SEARCH_URL + QUERY; }
+        @Override public String expectedOriginalUrlContains() { return BASE_SEARCH_URL + QUERY; }
         @Override public String expectedSearchString() { return QUERY; }
         @Nullable @Override public String expectedSearchSuggestion() { return null; }
         @Override public InfoItem.InfoType expectedInfoItemType() { return InfoItem.InfoType.STREAM; }
     }
 
-    public static class MusicVideos extends DefaultSearchExtractorTest {
-        private static SearchExtractor extractor;
+    public static class MusicVideos extends DefaultSearchExtractorTest implements InitYoutubeTest {
         private static final String QUERY = "fresku";
 
-        @BeforeAll
-        public static void setUp() throws Exception {
-            NewPipe.init(DownloaderTestImpl.getInstance());
-            extractor = YouTube.getSearchExtractor(QUERY, singletonList(YoutubeSearchQueryHandlerFactory.MUSIC_VIDEOS), "");
-            extractor.fetchPage();
+        @Override
+        protected SearchExtractor createExtractor() throws Exception {
+            return YouTube.getSearchExtractor(QUERY, singletonList(YoutubeSearchQueryHandlerFactory.MUSIC_VIDEOS), "");
         }
 
-        @Override public SearchExtractor extractor() { return extractor; }
         @Override public StreamingService expectedService() { return YouTube; }
         @Override public String expectedName() { return QUERY; }
         @Override public String expectedId() { return QUERY; }
-        @Override public String expectedUrlContains() { return "music.youtube.com/search?q=" + QUERY; }
-        @Override public String expectedOriginalUrlContains() { return "music.youtube.com/search?q=" + QUERY; }
+        @Override public String expectedUrlContains() { return BASE_SEARCH_URL + QUERY; }
+        @Override public String expectedOriginalUrlContains() { return BASE_SEARCH_URL + QUERY; }
         @Override public String expectedSearchString() { return QUERY; }
         @Nullable @Override public String expectedSearchSuggestion() { return null; }
         @Override public InfoItem.InfoType expectedInfoItemType() { return InfoItem.InfoType.STREAM; }
     }
 
-    public static class MusicAlbums extends DefaultSearchExtractorTest {
-        private static SearchExtractor extractor;
-        private static final String QUERY = "johnny sellah";
+    public static class MusicAlbums extends DefaultSearchExtractorTest implements InitYoutubeTest {
+        // searching for "scenography" on 28/07/2025 returns some autogenerated albums,
+        // and we want to test the extraction of those, too
+        private static final String QUERY = "scenography";
 
-        @BeforeAll
-        public static void setUp() throws Exception {
-            NewPipe.init(DownloaderTestImpl.getInstance());
-            extractor = YouTube.getSearchExtractor(QUERY, singletonList(YoutubeSearchQueryHandlerFactory.MUSIC_ALBUMS), "");
-            extractor.fetchPage();
+        @Override
+        protected SearchExtractor createExtractor() throws Exception {
+            return YouTube.getSearchExtractor(QUERY, singletonList(YoutubeSearchQueryHandlerFactory.MUSIC_ALBUMS), "");
         }
 
-        @Override public SearchExtractor extractor() { return extractor; }
         @Override public StreamingService expectedService() { return YouTube; }
         @Override public String expectedName() { return QUERY; }
         @Override public String expectedId() { return QUERY; }
-        @Override public String expectedUrlContains() { return "music.youtube.com/search?q=" + URLEncoder.encode(QUERY); }
-        @Override public String expectedOriginalUrlContains() { return "music.youtube.com/search?q=" + URLEncoder.encode(QUERY); }
+        @Override public String expectedUrlContains() { return BASE_SEARCH_URL + URLEncoder.encode(QUERY, StandardCharsets.UTF_8); }
+        @Override public String expectedOriginalUrlContains() { return BASE_SEARCH_URL + URLEncoder.encode(QUERY, StandardCharsets.UTF_8); }
         @Override public String expectedSearchString() { return QUERY; }
         @Nullable @Override public String expectedSearchSuggestion() { return null; }
         @Override public InfoItem.InfoType expectedInfoItemType() { return InfoItem.InfoType.PLAYLIST; }
     }
 
-    public static class MusicPlaylists extends DefaultSearchExtractorTest {
-        private static SearchExtractor extractor;
+    public static class MusicPlaylists extends DefaultSearchExtractorTest implements InitYoutubeTest {
         private static final String QUERY = "louivos";
 
-        @BeforeAll
-        public static void setUp() throws Exception {
-            NewPipe.init(DownloaderTestImpl.getInstance());
-            extractor = YouTube.getSearchExtractor(QUERY, singletonList(YoutubeSearchQueryHandlerFactory.MUSIC_PLAYLISTS), "");
-            extractor.fetchPage();
+        @Override
+        protected SearchExtractor createExtractor() throws Exception {
+            return YouTube.getSearchExtractor(QUERY, singletonList(YoutubeSearchQueryHandlerFactory.MUSIC_PLAYLISTS), "");
         }
 
-        @Override public SearchExtractor extractor() { return extractor; }
         @Override public StreamingService expectedService() { return YouTube; }
         @Override public String expectedName() { return QUERY; }
         @Override public String expectedId() { return QUERY; }
-        @Override public String expectedUrlContains() { return "music.youtube.com/search?q=" + QUERY; }
-        @Override public String expectedOriginalUrlContains() { return "music.youtube.com/search?q=" + QUERY; }
+        @Override public String expectedUrlContains() { return BASE_SEARCH_URL + QUERY; }
+        @Override public String expectedOriginalUrlContains() { return BASE_SEARCH_URL + QUERY; }
         @Override public String expectedSearchString() { return QUERY; }
         @Nullable @Override public String expectedSearchSuggestion() { return null; }
         @Override public InfoItem.InfoType expectedInfoItemType() { return InfoItem.InfoType.PLAYLIST; }
     }
 
-    @Disabled
-    public static class MusicArtists extends DefaultSearchExtractorTest {
-        private static SearchExtractor extractor;
+    public static class MusicArtists extends DefaultSearchExtractorTest implements InitYoutubeTest {
         private static final String QUERY = "kevin";
 
-        @BeforeAll
-        public static void setUp() throws Exception {
-            NewPipe.init(DownloaderTestImpl.getInstance());
-            extractor = YouTube.getSearchExtractor(QUERY, singletonList(YoutubeSearchQueryHandlerFactory.MUSIC_ARTISTS), "");
-            extractor.fetchPage();
+        @Override
+        protected SearchExtractor createExtractor() throws Exception {
+            return YouTube.getSearchExtractor(QUERY, singletonList(YoutubeSearchQueryHandlerFactory.MUSIC_ARTISTS), "");
         }
 
-        @Override public SearchExtractor extractor() { return extractor; }
         @Override public StreamingService expectedService() { return YouTube; }
         @Override public String expectedName() { return QUERY; }
         @Override public String expectedId() { return QUERY; }
-        @Override public String expectedUrlContains() { return "music.youtube.com/search?q=" + QUERY; }
-        @Override public String expectedOriginalUrlContains() { return "music.youtube.com/search?q=" + QUERY; }
+        @Override public String expectedUrlContains() { return BASE_SEARCH_URL + QUERY; }
+        @Override public String expectedOriginalUrlContains() { return BASE_SEARCH_URL + QUERY; }
         @Override public String expectedSearchString() { return QUERY; }
         @Nullable @Override public String expectedSearchSuggestion() { return null; }
         @Override public InfoItem.InfoType expectedInfoItemType() { return InfoItem.InfoType.CHANNEL; }
     }
 
-    public static class Suggestion extends DefaultSearchExtractorTest {
-        private static SearchExtractor extractor;
+    @Disabled("2025-07 - backend no longer seems to return any suggestion. "
+        + "See YoutubeMusicSearchExtractor#getSearchSuggestion")
+    public static class Suggestion extends DefaultSearchExtractorTest implements InitYoutubeTest {
         private static final String QUERY = "megaman x3";
-        private static final boolean CORRECTED = true;
 
-        @BeforeAll
-        public static void setUp() throws Exception {
-            NewPipe.init(DownloaderTestImpl.getInstance());
-            extractor = YouTube.getSearchExtractor(QUERY, singletonList(YoutubeSearchQueryHandlerFactory.MUSIC_SONGS), "");
-            extractor.fetchPage();
+        @Override
+        protected SearchExtractor createExtractor() throws Exception {
+            return YouTube.getSearchExtractor(QUERY, singletonList(YoutubeSearchQueryHandlerFactory.MUSIC_SONGS), "");
         }
 
-        @Override public SearchExtractor extractor() { return extractor; }
         @Override public StreamingService expectedService() { return YouTube; }
         @Override public String expectedName() { return QUERY; }
         @Override public String expectedId() { return QUERY; }
-        @Override public String expectedUrlContains() { return "music.youtube.com/search?q=" + URLEncoder.encode(QUERY); }
-        @Override public String expectedOriginalUrlContains() { return "music.youtube.com/search?q=" + URLEncoder.encode(QUERY); }
+        @Override public String expectedUrlContains() { return BASE_SEARCH_URL + URLEncoder.encode(QUERY, StandardCharsets.UTF_8); }
+        @Override public String expectedOriginalUrlContains() { return BASE_SEARCH_URL + URLEncoder.encode(QUERY, StandardCharsets.UTF_8); }
         @Override public String expectedSearchString() { return QUERY; }
         @Nullable @Override public String expectedSearchSuggestion() { return "mega man x3"; }
         @Override public InfoItem.InfoType expectedInfoItemType() { return InfoItem.InfoType.STREAM; }
-        @Override public boolean isCorrectedSearch() { return CORRECTED; }
     }
 
-    public static class CorrectedSearch extends DefaultSearchExtractorTest {
-        private static SearchExtractor extractor;
-        private static final String QUERY = "nocopyrigh sounds";
-        private static final String EXPECTED_SUGGESTION = "nocopyrightsounds";
+    public static class CorrectedSearch extends DefaultSearchExtractorTest implements InitYoutubeTest {
+        private static final String QUERY = "no copyrigh sounds";
+        private static final String EXPECTED_SUGGESTION = "no copyright sounds";
 
-        @BeforeAll
-        public static void setUp() throws Exception {
-            NewPipe.init(DownloaderTestImpl.getInstance());
-            extractor = YouTube.getSearchExtractor(QUERY, singletonList(YoutubeSearchQueryHandlerFactory.MUSIC_SONGS), "");
-            extractor.fetchPage();
+        @Override
+        protected SearchExtractor createExtractor() throws Exception {
+            return YouTube.getSearchExtractor(QUERY, singletonList(YoutubeSearchQueryHandlerFactory.MUSIC_SONGS), "");
         }
 
-        @Override public SearchExtractor extractor() { return extractor; }
         @Override public StreamingService expectedService() { return YouTube; }
         @Override public String expectedName() { return QUERY; }
         @Override public String expectedId() { return QUERY; }
-        @Override public String expectedUrlContains() { return "music.youtube.com/search?q=" + URLEncoder.encode(QUERY); }
-        @Override public String expectedOriginalUrlContains() { return "music.youtube.com/search?q=" + URLEncoder.encode(QUERY); }
+        @Override public String expectedUrlContains() { return BASE_SEARCH_URL + URLEncoder.encode(QUERY, StandardCharsets.UTF_8); }
+        @Override public String expectedOriginalUrlContains() { return BASE_SEARCH_URL + URLEncoder.encode(QUERY, StandardCharsets.UTF_8); }
         @Override public String expectedSearchString() { return QUERY; }
         @Nullable @Override public String expectedSearchSuggestion() { return EXPECTED_SUGGESTION; }
         @Override public InfoItem.InfoType expectedInfoItemType() { return InfoItem.InfoType.STREAM; }

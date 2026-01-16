@@ -1,75 +1,82 @@
 package org.schabi.newpipe.extractor.services.youtube.extractors;
 
-import com.grack.nanojson.JsonArray;
 import com.grack.nanojson.JsonObject;
 
-import com.grack.nanojson.JsonWriter;
+import org.schabi.newpipe.extractor.Image;
 import org.schabi.newpipe.extractor.Page;
 import org.schabi.newpipe.extractor.comments.CommentsInfoItemExtractor;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.localization.DateWrapper;
 import org.schabi.newpipe.extractor.localization.TimeAgoParser;
+import org.schabi.newpipe.extractor.stream.Description;
 import org.schabi.newpipe.extractor.utils.JsonUtils;
 import org.schabi.newpipe.extractor.utils.Utils;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.List;
 
+import static org.schabi.newpipe.extractor.comments.CommentsInfoItem.UNKNOWN_REPLY_COUNT;
+import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.getImagesFromThumbnailsArray;
 import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.getTextFromObject;
-import static org.schabi.newpipe.extractor.utils.Utils.EMPTY_STRING;
 
 public class YoutubeCommentsInfoItemExtractor implements CommentsInfoItemExtractor {
 
-    private final JsonObject json;
-    private JsonObject commentRenderer;
+    @Nonnull
+    private final JsonObject commentRenderer;
+    @Nullable
+    private final JsonObject commentRepliesRenderer;
+    @Nonnull
     private final String url;
+    @Nonnull
     private final TimeAgoParser timeAgoParser;
 
-    public YoutubeCommentsInfoItemExtractor(final JsonObject json,
-                                            final String url,
-                                            final TimeAgoParser timeAgoParser) {
-        this.json = json;
+    public YoutubeCommentsInfoItemExtractor(@Nonnull final JsonObject commentRenderer,
+                                            @Nullable final JsonObject commentRepliesRenderer,
+                                            @Nonnull final String url,
+                                            @Nonnull final TimeAgoParser timeAgoParser) {
+        this.commentRenderer = commentRenderer;
+        this.commentRepliesRenderer = commentRepliesRenderer;
         this.url = url;
         this.timeAgoParser = timeAgoParser;
     }
 
-    private JsonObject getCommentRenderer() throws ParsingException {
-        if(commentRenderer == null) {
-            if(!json.has("comment"))
-                commentRenderer = json;
-            else
-                commentRenderer = JsonUtils.getObject(json, "comment.commentRenderer");
+    @Nonnull
+    private List<Image> getAuthorThumbnails() throws ParsingException {
+        try {
+            return getImagesFromThumbnailsArray(JsonUtils.getArray(commentRenderer,
+                    "authorThumbnail.thumbnails"));
+        } catch (final Exception e) {
+            throw new ParsingException("Could not get author thumbnails", e);
         }
-        return commentRenderer;
     }
 
+    @Nonnull
     @Override
     public String getUrl() throws ParsingException {
         return url;
     }
 
+    @Nonnull
     @Override
-    public String getThumbnailUrl() throws ParsingException {
-        try {
-            final JsonArray arr = JsonUtils.getArray(getCommentRenderer(), "authorThumbnail.thumbnails");
-            return JsonUtils.getString(arr.getObject(2), "url");
-        } catch (final Exception e) {
-            throw new ParsingException("Could not get thumbnail url", e);
-        }
+    public List<Image> getThumbnails() throws ParsingException {
+        return getAuthorThumbnails();
     }
 
     @Override
     public String getName() throws ParsingException {
         try {
-            return getTextFromObject(JsonUtils.getObject(getCommentRenderer(), "authorText"));
+            return getTextFromObject(JsonUtils.getObject(commentRenderer, "authorText"));
         } catch (final Exception e) {
-            return EMPTY_STRING;
+            return "";
         }
     }
 
     @Override
     public String getTextualUploadDate() throws ParsingException {
         try {
-            return getTextFromObject(JsonUtils.getObject(getCommentRenderer(), "publishedTimeText"));
+            return getTextFromObject(JsonUtils.getObject(commentRenderer,
+                    "publishedTimeText"));
         } catch (final Exception e) {
             throw new ParsingException("Could not get publishedTimeText", e);
         }
@@ -78,9 +85,8 @@ public class YoutubeCommentsInfoItemExtractor implements CommentsInfoItemExtract
     @Nullable
     @Override
     public DateWrapper getUploadDate() throws ParsingException {
-        String textualPublishedTime = getTextualUploadDate();
-        if (timeAgoParser != null && textualPublishedTime != null
-                && !textualPublishedTime.isEmpty()) {
+        final String textualPublishedTime = getTextualUploadDate();
+        if (textualPublishedTime != null && !textualPublishedTime.isEmpty()) {
             return timeAgoParser.parse(textualPublishedTime);
         } else {
             return null;
@@ -107,8 +113,9 @@ public class YoutubeCommentsInfoItemExtractor implements CommentsInfoItemExtract
         // Try first to get the exact like count by using the accessibility data
         final String likeCount;
         try {
-            likeCount = Utils.removeNonDigitCharacters(JsonUtils.getString(getCommentRenderer(),
-                    "actionButtons.commentActionButtonsRenderer.likeButton.toggleButtonRenderer.accessibilityData.accessibilityData.label"));
+            likeCount = Utils.removeNonDigitCharacters(JsonUtils.getString(commentRenderer,
+                    "actionButtons.commentActionButtonsRenderer.likeButton.toggleButtonRenderer"
+                            + ".accessibilityData.accessibilityData.label"));
         } catch (final Exception e) {
             // Use the approximate like count returned into the voteCount object
             // This may return a language dependent version, e.g. in German: 3,3 Mio
@@ -158,13 +165,13 @@ public class YoutubeCommentsInfoItemExtractor implements CommentsInfoItemExtract
          */
         try {
             // If a comment has no likes voteCount is not set
-            if (!getCommentRenderer().has("voteCount")) {
-                return EMPTY_STRING;
+            if (!commentRenderer.has("voteCount")) {
+                return "";
             }
 
-            final JsonObject voteCountObj = JsonUtils.getObject(getCommentRenderer(), "voteCount");
+            final JsonObject voteCountObj = JsonUtils.getObject(commentRenderer, "voteCount");
             if (voteCountObj.isEmpty()) {
-                return EMPTY_STRING;
+                return "";
             }
             return getTextFromObject(voteCountObj);
         } catch (final Exception e) {
@@ -172,19 +179,22 @@ public class YoutubeCommentsInfoItemExtractor implements CommentsInfoItemExtract
         }
     }
 
+    @Nonnull
     @Override
-    public String getCommentText() throws ParsingException {
+    public Description getCommentText() throws ParsingException {
         try {
-            final JsonObject contentText = JsonUtils.getObject(getCommentRenderer(), "contentText");
+            final JsonObject contentText = JsonUtils.getObject(commentRenderer, "contentText");
             if (contentText.isEmpty()) {
                 // completely empty comments as described in
                 // https://github.com/TeamNewPipe/NewPipeExtractor/issues/380#issuecomment-668808584
-                return EMPTY_STRING;
+                return Description.EMPTY_DESCRIPTION;
             }
-            final String commentText = getTextFromObject(contentText);
+            final String commentText = getTextFromObject(contentText, true);
             // YouTube adds U+FEFF in some comments.
             // eg. https://www.youtube.com/watch?v=Nj4F63E59io<feff>
-            return Utils.removeUTF8BOM(commentText);
+            final String commentTextBomRemoved = Utils.removeUTF8BOM(commentText);
+
+            return new Description(commentTextBomRemoved, Description.HTML);
         } catch (final Exception e) {
             throw new ParsingException("Could not get comment text", e);
         }
@@ -193,64 +203,91 @@ public class YoutubeCommentsInfoItemExtractor implements CommentsInfoItemExtract
     @Override
     public String getCommentId() throws ParsingException {
         try {
-            return JsonUtils.getString(getCommentRenderer(), "commentId");
+            return JsonUtils.getString(commentRenderer, "commentId");
         } catch (final Exception e) {
             throw new ParsingException("Could not get comment id", e);
         }
     }
 
+    @Nonnull
     @Override
-    public String getUploaderAvatarUrl() throws ParsingException {
-        try {
-            JsonArray arr = JsonUtils.getArray(getCommentRenderer(), "authorThumbnail.thumbnails");
-            return JsonUtils.getString(arr.getObject(2), "url");
-        } catch (final Exception e) {
-            throw new ParsingException("Could not get author thumbnail", e);
-        }
+    public List<Image> getUploaderAvatars() throws ParsingException {
+        return getAuthorThumbnails();
     }
 
     @Override
-    public boolean isHeartedByUploader() throws ParsingException {
-        final JsonObject commentActionButtonsRenderer = getCommentRenderer().getObject("actionButtons")
+    public boolean isHeartedByUploader() {
+        final JsonObject commentActionButtonsRenderer = commentRenderer.getObject("actionButtons")
                 .getObject("commentActionButtonsRenderer");
         return commentActionButtonsRenderer.has("creatorHeart");
     }
 
     @Override
-    public boolean isPinned() throws ParsingException {
-        return getCommentRenderer().has("pinnedCommentBadge");
+    public boolean isPinned() {
+        return commentRenderer.has("pinnedCommentBadge");
     }
 
+    @Override
     public boolean isUploaderVerified() throws ParsingException {
-        return getCommentRenderer().has("authorCommentBadge");
+        return commentRenderer.has("authorCommentBadge");
     }
 
     @Override
     public String getUploaderName() throws ParsingException {
         try {
-            return getTextFromObject(JsonUtils.getObject(getCommentRenderer(), "authorText"));
+            return getTextFromObject(JsonUtils.getObject(commentRenderer, "authorText"));
         } catch (final Exception e) {
-            return EMPTY_STRING;
+            return "";
         }
     }
 
     @Override
     public String getUploaderUrl() throws ParsingException {
         try {
-            return "https://www.youtube.com/channel/" + JsonUtils.getString(getCommentRenderer(),
+            return "https://www.youtube.com/channel/" + JsonUtils.getString(commentRenderer,
                     "authorEndpoint.browseEndpoint.browseId");
         } catch (final Exception e) {
-            return EMPTY_STRING;
+            return "";
         }
     }
 
     @Override
-    public Page getReplies() throws ParsingException {
+    public int getReplyCount() {
+        if (commentRenderer.has("replyCount")) {
+            return commentRenderer.getInt("replyCount");
+        }
+        return UNKNOWN_REPLY_COUNT;
+    }
+
+    @Override
+    public Page getReplies() {
+        if (commentRepliesRenderer == null) {
+            return null;
+        }
+
         try {
-            final String id = JsonUtils.getString(JsonUtils.getArray(json, "replies.commentRepliesRenderer.contents").getObject(0), "continuationItemRenderer.continuationEndpoint.continuationCommand.token");
+            final String id = JsonUtils.getString(
+                    JsonUtils.getArray(commentRepliesRenderer, "contents")
+                            .getObject(0),
+                    "continuationItemRenderer.continuationEndpoint.continuationCommand.token");
             return new Page(url, id);
         } catch (final Exception e) {
-            return null; // Would return null for Comment Replies, since YouTube does not support nested replies.
+            return null;
         }
     }
+
+    @Override
+    public boolean isChannelOwner() {
+        return commentRenderer.getBoolean("authorIsChannelOwner");
+    }
+
+    @Override
+    public boolean hasCreatorReply() {
+        if (commentRepliesRenderer == null) {
+            return false;
+        }
+
+        return commentRepliesRenderer.has("viewRepliesCreatorThumbnail");
+    }
+
 }

@@ -1,26 +1,39 @@
 package org.schabi.newpipe.extractor.services.soundcloud.linkHandler;
 
+import java.util.regex.Pattern;
+
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.linkhandler.LinkHandlerFactory;
 import org.schabi.newpipe.extractor.services.soundcloud.SoundcloudParsingHelper;
 import org.schabi.newpipe.extractor.utils.Parser;
 import org.schabi.newpipe.extractor.utils.Utils;
 
-public class SoundcloudStreamLinkHandlerFactory extends LinkHandlerFactory {
-    private static final SoundcloudStreamLinkHandlerFactory instance =
-            new SoundcloudStreamLinkHandlerFactory();
-    private static final String URL_PATTERN = "^https?://(www\\.|m\\.)?soundcloud.com/[0-9a-z_-]+"
-            + "/(?!(tracks|albums|sets|reposts|followers|following)/?$)[0-9a-z_-]+/?([#?].*)?$";
+public final class SoundcloudStreamLinkHandlerFactory extends LinkHandlerFactory {
+    private static final SoundcloudStreamLinkHandlerFactory INSTANCE
+            = new SoundcloudStreamLinkHandlerFactory();
+
+    private static final String ON_URL_PATTERN = "^https?://on\\.soundcloud\\.com/[0-9a-zA-Z]+$";
+    private static final Pattern URL_PATTERN = Pattern.compile(
+        "^https?://(?:www\\.|m\\.)?"
+        + "soundcloud.com/[0-9a-z_-]+"
+        + "/(?!(?:tracks|albums|sets|reposts|followers|following)/?$)[0-9a-z_-]+/?(?:[#?].*)?$"
+        + "|" + ON_URL_PATTERN
+        );
+
+    private static final Pattern API_URL_PATTERN = Pattern.compile(
+        "^https?://api-v2\\.soundcloud.com"
+        + "/(tracks|albums|sets|reposts|followers|following)/([0-9a-z_-]+)/"
+        );
 
     private SoundcloudStreamLinkHandlerFactory() {
     }
 
     public static SoundcloudStreamLinkHandlerFactory getInstance() {
-        return instance;
+        return INSTANCE;
     }
 
     @Override
-    public String getUrl(final String id) throws ParsingException {
+    public String getUrl(final String id) throws ParsingException, UnsupportedOperationException {
         try {
             return SoundcloudParsingHelper.resolveUrlWithEmbedPlayer(
                     "https://api.soundcloud.com/tracks/" + id);
@@ -30,7 +43,10 @@ public class SoundcloudStreamLinkHandlerFactory extends LinkHandlerFactory {
     }
 
     @Override
-    public String getId(final String url) throws ParsingException {
+    public String getId(final String url) throws ParsingException, UnsupportedOperationException {
+        if (Parser.isMatch(API_URL_PATTERN, url)) {
+            return Parser.matchGroup1(API_URL_PATTERN, url);
+        }
         Utils.checkUrl(URL_PATTERN, url);
 
         try {

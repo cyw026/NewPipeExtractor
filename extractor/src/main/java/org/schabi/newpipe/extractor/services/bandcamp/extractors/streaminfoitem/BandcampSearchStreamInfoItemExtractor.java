@@ -1,15 +1,21 @@
 package org.schabi.newpipe.extractor.services.bandcamp.extractors.streaminfoitem;
 
 import org.jsoup.nodes.Element;
+import org.schabi.newpipe.extractor.Image;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 
-import javax.annotation.Nullable;
+import javax.annotation.Nonnull;
+import java.util.List;
+
+import static org.schabi.newpipe.extractor.services.bandcamp.extractors.BandcampExtractorHelper.getImagesFromSearchResult;
 
 public class BandcampSearchStreamInfoItemExtractor extends BandcampStreamInfoItemExtractor {
 
-    private final Element resultInfo, searchResult;
+    private final Element resultInfo;
+    private final Element searchResult;
 
-    public BandcampSearchStreamInfoItemExtractor(final Element searchResult, final String uploaderUrl) {
+    public BandcampSearchStreamInfoItemExtractor(final Element searchResult,
+                                                 final String uploaderUrl) {
         super(uploaderUrl);
         this.searchResult = searchResult;
         resultInfo = searchResult.getElementsByClass("result-info").first();
@@ -26,12 +32,6 @@ public class BandcampSearchStreamInfoItemExtractor extends BandcampStreamInfoIte
         }
     }
 
-    @Nullable
-    @Override
-    public String getUploaderAvatarUrl() {
-        return null;
-    }
-
     @Override
     public String getName() throws ParsingException {
         return resultInfo.getElementsByClass("heading").text();
@@ -42,15 +42,10 @@ public class BandcampSearchStreamInfoItemExtractor extends BandcampStreamInfoIte
         return resultInfo.getElementsByClass("itemurl").text();
     }
 
+    @Nonnull
     @Override
-    public String getThumbnailUrl() throws ParsingException {
-        final Element img = searchResult.getElementsByClass("art").first()
-                .getElementsByTag("img").first();
-        if (img != null) {
-            return img.attr("src");
-        } else {
-            return null;
-        }
+    public List<Image> getThumbnails() throws ParsingException {
+        return getImagesFromSearchResult(searchResult);
     }
 
     @Override

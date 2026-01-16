@@ -17,8 +17,11 @@ public class Page implements Serializable {
     @Nullable
     private final byte[] body;
 
-    public Page(final String url, final String id, final List<String> ids,
-                final Map<String, String> cookies, @Nullable final byte[] body) {
+    public Page(final String url,
+                final String id,
+                final List<String> ids,
+                final Map<String, String> cookies,
+                @Nullable final byte[] body) {
         this.url = url;
         this.id = id;
         this.ids = ids;
@@ -32,6 +35,10 @@ public class Page implements Serializable {
 
     public Page(final String url, final String id) {
         this(url, id, null, null, null);
+    }
+
+    public Page(final String url, final String id, final byte[] body) {
+        this(url, id, null, null, body);
     }
 
     public Page(final String url, final byte[] body) {

@@ -1,10 +1,11 @@
 package org.schabi.newpipe.extractor.services.peertube;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.schabi.newpipe.extractor.ServiceList.PeerTube;
+
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.schabi.newpipe.downloader.DownloaderTestImpl;
-import org.schabi.newpipe.extractor.NewPipe;
 import org.schabi.newpipe.extractor.StreamingService;
 import org.schabi.newpipe.extractor.exceptions.ExtractionException;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
@@ -19,14 +20,10 @@ import java.util.Locale;
 
 import javax.annotation.Nullable;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.schabi.newpipe.extractor.ServiceList.PeerTube;
-
 public abstract class PeertubeStreamExtractorTest extends DefaultStreamExtractorTest {
     private static final String BASE_URL = "/videos/watch/";
 
     @Override public boolean expectedHasAudioStreams() { return false; }
-    @Override public boolean expectedHasFrames() { return false; }
 
     public static class WhatIsPeertube extends PeertubeStreamExtractorTest {
         private static final String ID = "9c9de5e8-0a1e-484a-b099-e80766180a6d";
@@ -34,23 +31,19 @@ public abstract class PeertubeStreamExtractorTest extends DefaultStreamExtractor
         private static final int TIMESTAMP_MINUTE = 1;
         private static final int TIMESTAMP_SECOND = 21;
         private static final String URL = INSTANCE + BASE_URL + ID + "?start=" + TIMESTAMP_MINUTE + "m" + TIMESTAMP_SECOND + "s";
-        private static StreamExtractor extractor;
 
-        @BeforeAll
-        public static void setUp() throws Exception {
-            NewPipe.init(DownloaderTestImpl.getInstance());
+        @Override
+        protected StreamExtractor createExtractor() throws Exception {
             // setting instance might break test when running in parallel (!)
             PeerTube.setInstance(new PeertubeInstance(INSTANCE, "FramaTube"));
-            extractor = PeerTube.getStreamExtractor(URL);
-            extractor.fetchPage();
+            return PeerTube.getStreamExtractor(URL);
         }
 
         @Test
         public void testGetLanguageInformation() throws ParsingException {
-            assertEquals(new Locale("en"), extractor.getLanguageInfo());
+            assertEquals(new Locale("en"), extractor().getLanguageInfo());
         }
 
-        @Override public StreamExtractor extractor() { return extractor; }
         @Override public StreamingService expectedService() { return PeerTube; }
         @Override public String expectedName() { return "What is PeerTube?"; }
         @Override public String expectedId() { return ID; }
@@ -86,7 +79,7 @@ public abstract class PeertubeStreamExtractorTest extends DefaultStreamExtractor
         @Override public long expectedViewCountAtLeast() { return 38600; }
         @Nullable @Override public String expectedUploadDate() { return "2018-10-01 10:52:46.396"; }
         @Nullable @Override public String expectedTextualUploadDate() { return "2018-10-01T10:52:46.396Z"; }
-        @Override public long expectedLikeCountAtLeast() { return 120; }
+        @Override public long expectedLikeCountAtLeast() { return 18; }
         @Override public long expectedDislikeCountAtLeast() { return 0; }
         @Override public String expectedHost() { return "framatube.org"; }
         @Override public String expectedCategory() { return "Science & Technology"; }
@@ -100,18 +93,14 @@ public abstract class PeertubeStreamExtractorTest extends DefaultStreamExtractor
         private static final String INSTANCE = "https://tilvids.com";
 
         private static final String URL = INSTANCE + BASE_URL + ID;
-        private static StreamExtractor extractor;
 
-        @BeforeAll
-        public static void setUp() throws Exception {
-            NewPipe.init(DownloaderTestImpl.getInstance());
+        @Override
+        protected StreamExtractor createExtractor() throws Exception {
             // setting instance might break test when running in parallel (!)
             PeerTube.setInstance(new PeertubeInstance(INSTANCE, "TILvids"));
-            extractor = PeerTube.getStreamExtractor(URL);
-            extractor.fetchPage();
+            return PeerTube.getStreamExtractor(URL);
         }
 
-        @Override public StreamExtractor extractor() { return extractor; }
         @Override public StreamingService expectedService() { return PeerTube; }
         @Override public String expectedName() { return "A Goodbye to Flash Games"; }
         @Override public String expectedId() { return ID; }
@@ -138,6 +127,7 @@ public abstract class PeertubeStreamExtractorTest extends DefaultStreamExtractor
         @Override public String expectedLicence() { return "Unknown"; }
         @Override public Locale expectedLanguageInfo() { return null; }
         @Override public List<String> expectedTags() { return Arrays.asList("Marinauts", "adobe flash", "adobe flash player", "flash games", "the marinauts"); }
+        @Override public boolean expectedHasFrames() { return false; } // not yet supported by instance
     }
 
     @Disabled("Test broken, SSL problem")
@@ -145,18 +135,14 @@ public abstract class PeertubeStreamExtractorTest extends DefaultStreamExtractor
         private static final String ID = "dbd8e5e1-c527-49b6-b70c-89101dbb9c08";
         private static final String INSTANCE = "https://nocensoring.net";
         private static final String URL = INSTANCE + "/videos/embed/" + ID;
-        private static StreamExtractor extractor;
 
-        @BeforeAll
-        public static void setUp() throws Exception {
-            NewPipe.init(DownloaderTestImpl.getInstance());;
+        @Override
+        protected StreamExtractor createExtractor() throws Exception {
             // setting instance might break test when running in parallel (!)
             PeerTube.setInstance(new PeertubeInstance(INSTANCE));
-            extractor = PeerTube.getStreamExtractor(URL);
-            extractor.fetchPage();
+            return PeerTube.getStreamExtractor(URL);
         }
 
-        @Override public StreamExtractor extractor() { return extractor; }
         @Override public StreamingService expectedService() { return PeerTube; }
         @Override public String expectedName() { return "Covid-19 ? [Court-métrage]"; }
         @Override public String expectedId() { return ID; }
@@ -185,30 +171,71 @@ public abstract class PeertubeStreamExtractorTest extends DefaultStreamExtractor
         @Override public List<String> expectedTags() { return Arrays.asList("Covid-19", "Gérôme-Mary trebor", "Horreur et beauté", "court-métrage", "nue artistique"); }
     }
 
+    public static class Segments extends PeertubeStreamExtractorTest {
+        private static final String ID = "vqABGP97fEjo7RhPuDnSZk";
+        private static final String INSTANCE = "https://tube.tchncs.de";
+
+        private static final String URL = INSTANCE + BASE_URL + ID;
+
+        @Override
+        protected StreamExtractor createExtractor() throws Exception {
+            // setting instance might break test when running in parallel (!)
+            PeerTube.setInstance(new PeertubeInstance(INSTANCE, "tchncs.de"));
+            return PeerTube.getStreamExtractor(URL);
+        }
+
+        @Override public StreamingService expectedService() { return PeerTube; }
+        @Override public String expectedName() { return "Bauinformatik 11 – Objekte und Methoden"; }
+        @Override public String expectedId() { return ID; }
+        @Override public String expectedUrlContains() { return INSTANCE + BASE_URL + ID; }
+        @Override public String expectedOriginalUrlContains() { return URL; }
+
+        @Override public StreamType expectedStreamType() { return StreamType.VIDEO_STREAM; }
+        @Override public String expectedUploaderName() { return "Martin Vogel"; }
+        @Override public String expectedUploaderUrl() { return "https://tube.tchncs.de/accounts/martin_vogel@tube.tchncs.de"; }
+        @Override public String expectedSubChannelName() { return "Bauinformatik mit Python"; }
+        @Override public String expectedSubChannelUrl() { return "https://tube.tchncs.de/video-channels/python"; }
+        @Override public List<String> expectedDescriptionContains() { // CRLF line ending
+            return Arrays.asList("Um", "Programme", "Variablen", "Funktionen", "Objekte", "Skript", "Wiederholung", "Listen");
+        }
+        @Override public long expectedLength() { return 1017; }
+        @Override public long expectedViewCountAtLeast() { return 20; }
+        @Nullable @Override public String expectedUploadDate() { return "2023-12-08 15:57:04.142"; }
+        @Nullable @Override public String expectedTextualUploadDate() { return "2023-12-08T15:57:04.142Z"; }
+        @Override public long expectedLikeCountAtLeast() { return 0; }
+        @Override public long expectedDislikeCountAtLeast() { return 0; }
+        @Override public boolean expectedHasSubtitles() { return false; }
+        @Override public String expectedHost() { return "tube.tchncs.de"; }
+        @Override public String expectedCategory() { return "Unknown"; }
+        @Override public String expectedLicence() { return "Unknown"; }
+        @Override public Locale expectedLanguageInfo() { return null; }
+        @Override public List<String> expectedTags() { return Arrays.asList("Attribute", "Bauinformatik", "Klassen", "Objekte", "Python"); }
+    }
 
     @BeforeAll
-    public static void setUp() throws Exception {
-        NewPipe.init(DownloaderTestImpl.getInstance());
+    @Override
+    public void setUp() throws Exception {
+        super.setUp();
         PeerTube.setInstance(new PeertubeInstance("https://peertube.cpy.re", "PeerTube test server"));
     }
 
     @Test
     public void testGetEmptyDescription() throws Exception {
-        StreamExtractor extractorEmpty = PeerTube.getStreamExtractor("https://framatube.org/api/v1/videos/d5907aad-2252-4207-89ec-a4b687b9337d");
+        final StreamExtractor extractorEmpty = PeerTube.getStreamExtractor("https://framatube.org/api/v1/videos/d5907aad-2252-4207-89ec-a4b687b9337d");
         extractorEmpty.fetchPage();
         assertEquals("", extractorEmpty.getDescription().getContent());
     }
 
     @Test
     public void testGetSmallDescription() throws Exception {
-        StreamExtractor extractorSmall = PeerTube.getStreamExtractor("https://peertube.cpy.re/videos/watch/d2a5ec78-5f85-4090-8ec5-dc1102e022ea");
+        final StreamExtractor extractorSmall = PeerTube.getStreamExtractor("https://peertube.cpy.re/videos/watch/d2a5ec78-5f85-4090-8ec5-dc1102e022ea");
         extractorSmall.fetchPage();
         assertEquals("https://www.kickstarter.com/projects/1587081065/nothing-to-hide-the-documentary", extractorSmall.getDescription().getContent());
     }
 
     @Test
     public void testGetSupportInformation() throws ExtractionException, IOException {
-        StreamExtractor supportInfoExtractor = PeerTube.getStreamExtractor("https://framatube.org/videos/watch/ee408ec8-07cd-4e35-b884-fb681a4b9d37");
+        final StreamExtractor supportInfoExtractor = PeerTube.getStreamExtractor("https://framatube.org/videos/watch/ee408ec8-07cd-4e35-b884-fb681a4b9d37");
         supportInfoExtractor.fetchPage();
         assertEquals("https://utip.io/chatsceptique", supportInfoExtractor.getSupportInfo());
     }

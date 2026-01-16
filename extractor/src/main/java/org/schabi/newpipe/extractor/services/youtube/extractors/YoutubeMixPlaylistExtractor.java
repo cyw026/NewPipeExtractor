@@ -1,35 +1,54 @@
 package org.schabi.newpipe.extractor.services.youtube.extractors;
 
+import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.DISABLE_PRETTY_PRINT_PARAMETER;
+import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.YOUTUBEI_V1_URL;
+import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.extractCookieValue;
+import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.extractPlaylistTypeFromPlaylistId;
+import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.getValidJsonResponseBody;
+import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.getYouTubeHeaders;
+import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.prepareDesktopJsonBuilder;
+import static org.schabi.newpipe.extractor.utils.Utils.getQueryValue;
+import static org.schabi.newpipe.extractor.utils.Utils.isNullOrEmpty;
+import static org.schabi.newpipe.extractor.utils.Utils.stringToURL;
+
 import com.grack.nanojson.JsonArray;
 import com.grack.nanojson.JsonBuilder;
 import com.grack.nanojson.JsonObject;
-
 import com.grack.nanojson.JsonWriter;
+
+import org.schabi.newpipe.extractor.Image;
+import org.schabi.newpipe.extractor.Image.ResolutionLevel;
 import org.schabi.newpipe.extractor.ListExtractor;
 import org.schabi.newpipe.extractor.Page;
 import org.schabi.newpipe.extractor.StreamingService;
 import org.schabi.newpipe.extractor.downloader.Downloader;
 import org.schabi.newpipe.extractor.downloader.Response;
+import org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException;
 import org.schabi.newpipe.extractor.exceptions.ExtractionException;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.linkhandler.ListLinkHandler;
 import org.schabi.newpipe.extractor.localization.Localization;
 import org.schabi.newpipe.extractor.localization.TimeAgoParser;
 import org.schabi.newpipe.extractor.playlist.PlaylistExtractor;
+import org.schabi.newpipe.extractor.playlist.PlaylistInfo;
 import org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper;
+import org.schabi.newpipe.extractor.stream.Description;
 import org.schabi.newpipe.extractor.stream.StreamInfoItem;
 import org.schabi.newpipe.extractor.stream.StreamInfoItemsCollector;
+import org.schabi.newpipe.extractor.utils.ImageSuffix;
 import org.schabi.newpipe.extractor.utils.JsonUtils;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.*;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
-import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.*;
-import static org.schabi.newpipe.extractor.utils.Utils.*;
 
 /**
  * A {@link YoutubePlaylistExtractor} for a mix (auto-generated playlist).
@@ -37,6 +56,12 @@ import static org.schabi.newpipe.extractor.utils.Utils.*;
  * {@code youtube.com/watch?v=videoId&list=playlistId}
  */
 public class YoutubeMixPlaylistExtractor extends PlaylistExtractor {
+    private static final List<ImageSuffix> IMAGE_URL_SUFFIXES_AND_RESOLUTIONS = List.of(
+            // sqdefault and maxresdefault image resolutions are not available on all
+            // videos, so don't add them in the list of available resolutions
+            new ImageSuffix("default.jpg", 90, 120, ResolutionLevel.LOW),
+            new ImageSuffix("mqdefault.jpg", 180, 320, ResolutionLevel.MEDIUM),
+            new ImageSuffix("hqdefault.jpg", 360, 480, ResolutionLevel.MEDIUM));
 
     /**
      * YouTube identifies mixes based on this cookie. With this information it can generate
@@ -71,19 +96,30 @@ public class YoutubeMixPlaylistExtractor extends PlaylistExtractor {
             jsonBody.value("playlistIndex", Integer.parseInt(playlistIndexString));
         }
 
-        final byte[] body = JsonWriter.string(jsonBody.done()).getBytes(UTF_8);
+        final byte[] body = JsonWriter.string(jsonBody.done()).getBytes(StandardCharsets.UTF_8);
 
-        final Map<String, List<String>> headers = new HashMap<>();
-        addClientInfoHeaders(headers);
+        // Cookie is required due to consent
+        final var headers = getYouTubeHeaders();
 
-        final Response response = getDownloader().post(YOUTUBEI_V1_URL + "next?key=" + getKey(),
-                headers, body, localization);
+        final Response response = getDownloader().postWithContentTypeJson(
+                YOUTUBEI_V1_URL + "next?" + DISABLE_PRETTY_PRINT_PARAMETER, headers, body,
+                localization);
 
         initialData = JsonUtils.toJsonObject(getValidJsonResponseBody(response));
-        playlistData = initialData.getObject("contents").getObject("twoColumnWatchNextResults")
-                .getObject("playlist").getObject("playlist");
-        if (isNullOrEmpty(playlistData)) throw new ExtractionException(
-                "Could not get playlistData");
+        playlistData = initialData
+                .getObject("contents")
+                .getObject("twoColumnWatchNextResults")
+                .getObject("playlist")
+                .getObject("playlist");
+        if (isNullOrEmpty(playlistData)) {
+            final ExtractionException ex = new ExtractionException("Could not get playlistData");
+            if (!YoutubeParsingHelper.isConsentAccepted()) {
+                throw new ContentNotAvailableException(
+                        "Consent is required in some countries to view Mix playlists",
+                        ex);
+            }
+            throw ex;
+        }
         cookieValue = extractCookieValue(COOKIE_NAME, response);
     }
 
@@ -97,24 +133,21 @@ public class YoutubeMixPlaylistExtractor extends PlaylistExtractor {
         return name;
     }
 
+    @Nonnull
     @Override
-    public String getThumbnailUrl() throws ParsingException {
+    public List<Image> getThumbnails() throws ParsingException {
         try {
-            return getThumbnailUrlFromPlaylistId(playlistData.getString("playlistId"));
+            return getThumbnailsFromPlaylistId(playlistData.getString("playlistId"));
         } catch (final Exception e) {
             try {
-                // Fallback to thumbnail of current video. Always the case for channel mix
-                return getThumbnailUrlFromVideoId(initialData.getObject("currentVideoEndpoint")
+                // Fallback to thumbnail of current video. Always the case for channel mixes
+                return getThumbnailsFromVideoId(initialData.getObject("currentVideoEndpoint")
                         .getObject("watchEndpoint").getString("videoId"));
             } catch (final Exception ignored) {
             }
-            throw new ParsingException("Could not get playlist thumbnail", e);
-        }
-    }
 
-    @Override
-    public String getBannerUrl() {
-        return "";
+            throw new ParsingException("Could not get playlist thumbnails", e);
+        }
     }
 
     @Override
@@ -129,10 +162,11 @@ public class YoutubeMixPlaylistExtractor extends PlaylistExtractor {
         return "YouTube";
     }
 
+    @Nonnull
     @Override
-    public String getUploaderAvatarUrl() {
+    public List<Image> getUploaderAvatars() {
         // YouTube mixes are auto-generated by YouTube
-        return "";
+        return List.of();
     }
 
     @Override
@@ -148,8 +182,14 @@ public class YoutubeMixPlaylistExtractor extends PlaylistExtractor {
 
     @Nonnull
     @Override
-    public InfoItemsPage<StreamInfoItem> getInitialPage() throws IOException,
-            ExtractionException {
+    public Description getDescription() throws ParsingException {
+        return Description.EMPTY_DESCRIPTION;
+    }
+
+    @Nonnull
+    @Override
+    public InfoItemsPage<StreamInfoItem> getInitialPage()
+            throws IOException, ExtractionException {
         final StreamInfoItemsCollector collector = new StreamInfoItemsCollector(getServiceId());
         collectStreamsFrom(collector, playlistData.getArray("contents"));
 
@@ -159,9 +199,10 @@ public class YoutubeMixPlaylistExtractor extends PlaylistExtractor {
         return new InfoItemsPage<>(collector, getNextPageFrom(playlistData, cookies));
     }
 
-    private Page getNextPageFrom(final JsonObject playlistJson,
-                                 final Map<String, String> cookies) throws IOException,
-            ExtractionException {
+    @Nonnull
+    private Page getNextPageFrom(@Nonnull final JsonObject playlistJson,
+                                 final Map<String, String> cookies)
+            throws IOException, ExtractionException {
         final JsonObject lastStream = ((JsonObject) playlistJson.getArray("contents")
                 .get(playlistJson.getArray("contents").size() - 1));
         if (lastStream == null || lastStream.getObject("playlistPanelVideoRenderer") == null) {
@@ -181,9 +222,10 @@ public class YoutubeMixPlaylistExtractor extends PlaylistExtractor {
                 .value("playlistIndex", index)
                 .value("params", params)
                 .done())
-                .getBytes(UTF_8);
+                .getBytes(StandardCharsets.UTF_8);
 
-        return new Page(YOUTUBEI_V1_URL + "next?key=" + getKey(), null, null, cookies, body);
+        return new Page(YOUTUBEI_V1_URL + "next?" + DISABLE_PRETTY_PRINT_PARAMETER, null, null,
+                cookies, body);
     }
 
     @Override
@@ -197,11 +239,11 @@ public class YoutubeMixPlaylistExtractor extends PlaylistExtractor {
         }
 
         final StreamInfoItemsCollector collector = new StreamInfoItemsCollector(getServiceId());
-        final Map<String, List<String>> headers = new HashMap<>();
-        addClientInfoHeaders(headers);
+        // Cookie is required due to consent
+        final var headers = getYouTubeHeaders();
 
-        final Response response = getDownloader().post(page.getUrl(), headers, page.getBody(),
-                getExtractorLocalization());
+        final Response response = getDownloader().postWithContentTypeJson(page.getUrl(), headers,
+                page.getBody(), getExtractorLocalization());
         final JsonObject ajaxJson = JsonUtils.toJsonObject(getValidJsonResponseBody(response));
         final JsonObject playlistJson = ajaxJson.getObject("contents")
                 .getObject("twoColumnWatchNextResults").getObject("playlist").getObject("playlist");
@@ -217,59 +259,40 @@ public class YoutubeMixPlaylistExtractor extends PlaylistExtractor {
 
     private void collectStreamsFrom(@Nonnull final StreamInfoItemsCollector collector,
                                     @Nullable final List<Object> streams) {
-
         if (streams == null) {
             return;
         }
 
         final TimeAgoParser timeAgoParser = getTimeAgoParser();
 
-        for (final Object stream : streams) {
-            if (stream instanceof JsonObject) {
-                final JsonObject streamInfo = ((JsonObject) stream)
-                        .getObject("playlistPanelVideoRenderer");
-                if (streamInfo != null) {
-                    collector.commit(new YoutubeStreamInfoItemExtractor(streamInfo,
-                            timeAgoParser));
-                }
-            }
-        }
+        streams.stream()
+                .filter(JsonObject.class::isInstance)
+                .map(JsonObject.class::cast)
+                .map(stream -> stream.getObject("playlistPanelVideoRenderer"))
+                .filter(Objects::nonNull)
+                .map(streamInfo -> new YoutubeStreamInfoItemExtractor(streamInfo, timeAgoParser))
+                .forEachOrdered(collector::commit);
     }
 
-    private String getThumbnailUrlFromPlaylistId(final String playlistId) throws ParsingException {
-        final String videoId;
-        if (playlistId.startsWith("RDMM")) {
-            videoId = playlistId.substring(4);
-        } else if (playlistId.startsWith("RDCMUC")) {
-            throw new ParsingException("This playlist is a channel mix");
-        } else {
-            videoId = playlistId.substring(2);
-        }
-        if (videoId.isEmpty()) {
-            throw new ParsingException("videoId is empty");
-        }
-        return getThumbnailUrlFromVideoId(videoId);
+    @Nonnull
+    private List<Image> getThumbnailsFromPlaylistId(@Nonnull final String playlistId)
+            throws ParsingException {
+        return getThumbnailsFromVideoId(YoutubeParsingHelper.extractVideoIdFromMixId(playlistId));
     }
 
-    private String getThumbnailUrlFromVideoId(final String videoId) {
-        return "https://i.ytimg.com/vi/" + videoId + "/hqdefault.jpg";
+    @Nonnull
+    private List<Image> getThumbnailsFromVideoId(@Nonnull final String videoId) {
+        final String baseUrl = "https://i.ytimg.com/vi/" + videoId + "/";
+        return IMAGE_URL_SUFFIXES_AND_RESOLUTIONS.stream()
+                .map(imageSuffix -> new Image(baseUrl + imageSuffix.getSuffix(),
+                        imageSuffix.getHeight(), imageSuffix.getWidth(),
+                        imageSuffix.getResolutionLevel()))
+                .collect(Collectors.toUnmodifiableList());
     }
 
     @Nonnull
     @Override
-    public String getSubChannelName() {
-        return "";
-    }
-
-    @Nonnull
-    @Override
-    public String getSubChannelUrl() {
-        return "";
-    }
-
-    @Nonnull
-    @Override
-    public String getSubChannelAvatarUrl() {
-        return "";
+    public PlaylistInfo.PlaylistType getPlaylistType() throws ParsingException {
+        return extractPlaylistTypeFromPlaylistId(playlistData.getString("playlistId"));
     }
 }

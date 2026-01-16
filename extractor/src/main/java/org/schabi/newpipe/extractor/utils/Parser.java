@@ -1,123 +1,189 @@
-package org.schabi.newpipe.extractor.utils;
-
-import org.nibor.autolink.LinkExtractor;
-import org.nibor.autolink.LinkSpan;
-import org.nibor.autolink.LinkType;
-import org.schabi.newpipe.extractor.exceptions.ParsingException;
-
-import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import static org.schabi.newpipe.extractor.utils.Utils.UTF_8;
-
 /*
  * Created by Christian Schabesberger on 02.02.16.
  *
- * Copyright (C) Christian Schabesberger 2016 <chris.schabesberger@mailbox.org>
- * Parser.java is part of NewPipe.
+ * Copyright (C) 2016 Christian Schabesberger <chris.schabesberger@mailbox.org>
+ * Parser.java is part of NewPipe Extractor.
  *
- * NewPipe is free software: you can redistribute it and/or modify
+ * NewPipe Extractor is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * NewPipe is distributed in the hope that it will be useful,
+ * NewPipe Extractor is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with NewPipe.  If not, see <http://www.gnu.org/licenses/>.
+ * along with NewPipe Extractor. If not, see <https://www.gnu.org/licenses/>.
  */
 
+package org.schabi.newpipe.extractor.utils;
+
+import org.schabi.newpipe.extractor.exceptions.ParsingException;
+
+import java.util.Arrays;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+import javax.annotation.Nonnull;
+
 /**
- * avoid using regex !!!
+ * Avoid using regex !!!
  */
-public class Parser {
+public final class Parser {
 
     private Parser() {
     }
 
     public static class RegexException extends ParsingException {
-        public RegexException(String message) {
+        public RegexException(final String message) {
             super(message);
         }
     }
 
-    public static String matchGroup1(String pattern, String input) throws RegexException {
-        return matchGroup(pattern, input, 1);
-    }
-
-    public static String matchGroup1(Pattern pattern, String input) throws RegexException {
-        return matchGroup(pattern, input, 1);
-    }
-
-    public static String matchGroup(String pattern, String input, int group) throws RegexException {
-        Pattern pat = Pattern.compile(pattern);
-        return matchGroup(pat, input, group);
-    }
-
-    public static String matchGroup(Pattern pat, String input, int group) throws RegexException {
-        Matcher mat = pat.matcher(input);
-        boolean foundMatch = mat.find();
-        if (foundMatch) {
-            return mat.group(group);
+    @Nonnull
+    public static Matcher matchOrThrow(@Nonnull final Pattern pattern,
+                                              final String input) throws RegexException {
+        final Matcher matcher = pattern.matcher(input);
+        if (matcher.find()) {
+            return matcher;
         } else {
-            // only pass input to exception message when it is not too long
-            if (input.length() > 1024) {
-                throw new RegexException("failed to find pattern \"" + pat.pattern() + "\"");
-            } else {
-                throw new RegexException("failed to find pattern \"" + pat.pattern() + "\" inside of \"" + input + "\"");
+            String errorMessage = "Failed to find pattern \"" + pattern.pattern() + "\"";
+            if (input.length() <= 1024) {
+                errorMessage += " inside of \"" + input + "\"";
             }
+            throw new RegexException(errorMessage);
         }
     }
 
-    public static boolean isMatch(String pattern, String input) {
-        final Pattern pat = Pattern.compile(pattern);
-        final Matcher mat = pat.matcher(input);
-        return mat.find();
+    /**
+     * Matches group 1 of the given pattern against the input
+     * and returns the matched group
+     *
+     * @param pattern The regex pattern to match.
+     * @param input   The input string to match against.
+     * @return The matching group as a string.
+     * @throws RegexException If the pattern does not match the input or if the group is not found.
+     */
+    @Nonnull
+    public static String matchGroup1(final String pattern, final String input)
+            throws RegexException {
+        return matchGroup(pattern, input, 1);
     }
 
-    public static boolean isMatch(Pattern pattern, String input) {
-        final Matcher mat = pattern.matcher(input);
-        return mat.find();
+    /**
+     * Matches group 1 of the given pattern against the input
+     * and returns the matched group
+     *
+     * @param pattern The regex pattern to match.
+     * @param input   The input string to match against.
+     * @return The matching group as a string.
+     * @throws RegexException If the pattern does not match the input or if the group is not found.
+     */
+    @Nonnull
+    public static String matchGroup1(final Pattern pattern, final String input)
+            throws RegexException {
+        return matchGroup(pattern, input, 1);
     }
 
-    public static Map<String, String> compatParseMap(final String input) throws UnsupportedEncodingException {
-        Map<String, String> map = new HashMap<>();
-        for (String arg : input.split("&")) {
-            String[] splitArg = arg.split("=");
-            if (splitArg.length > 1) {
-                map.put(splitArg[0], URLDecoder.decode(splitArg[1], UTF_8));
-            } else {
-                map.put(splitArg[0], "");
+    /**
+     * Matches the specified group of the given pattern against the input,
+     * and returns the matched group
+     *
+     * @param pattern The regex pattern to match.
+     * @param input   The input string to match against.
+     * @param group   The group number to retrieve (1-based index).
+     * @return The matching group as a string.
+     * @throws RegexException If the pattern does not match the input or if the group is not found.
+     */
+    @Nonnull
+    public static String matchGroup(final String pattern, final String input, final int group)
+            throws RegexException {
+        return matchGroup(Pattern.compile(pattern), input, group);
+    }
+
+    /**
+     * Matches the specified group of the given pattern against the input,
+     * and returns the matched group
+     *
+     * @param pattern The regex pattern to match.
+     * @param input   The input string to match against.
+     * @param group   The group number to retrieve (1-based index).
+     * @return The matching group as a string.
+     * @throws RegexException If the pattern does not match the input or if the group is not found.
+     */
+    @Nonnull
+    public static String matchGroup(@Nonnull final Pattern pattern,
+                                    final String input,
+                                    final int group)
+            throws RegexException {
+        return matchOrThrow(pattern, input).group(group);
+    }
+
+    /**
+     * Matches multiple patterns against the input string and
+     * returns the first successful matcher
+     *
+     * @param patterns The array of regex patterns to match.
+     * @param input    The input string to match against.
+     * @return A {@code Matcher} for the first successful match.
+     * @throws RegexException If no patterns match the input or if {@code patterns} is empty.
+     */
+    public static String matchGroup1MultiplePatterns(final Pattern[] patterns, final String input)
+            throws RegexException {
+        return matchMultiplePatterns(patterns, input).group(1);
+    }
+
+    /**
+     * Matches multiple patterns against the input string and
+     * returns the first successful matcher
+     *
+     * @param patterns The array of regex patterns to match.
+     * @param input    The input string to match against.
+     * @return A {@code Matcher} for the first successful match.
+     * @throws RegexException If no patterns match the input or if {@code patterns} is empty.
+     */
+    public static Matcher matchMultiplePatterns(final Pattern[] patterns, final String input)
+            throws RegexException {
+        RegexException exception = null;
+        for (final var pattern : patterns) {
+            final var matcher = pattern.matcher(input);
+            if (matcher.find()) {
+                return matcher;
+            } else if (exception == null) {
+                exception = new RegexException("Failed to find pattern \"" + pattern.pattern()
+                    + "\""
+                    // only pass input to exception message when it is not too long
+                    + (input.length() <= 1000
+                    ? "inside of \"" + input + "\""
+                    : "")
+                );
             }
         }
-        return map;
+
+        throw exception != null
+            ? exception
+            : new RegexException("Empty patterns array passed to matchMultiplePatterns");
     }
 
-    public static String[] getLinksFromString(final String txt) throws ParsingException {
-        try {
-            ArrayList<String> links = new ArrayList<>();
-            LinkExtractor linkExtractor = LinkExtractor.builder()
-                    .linkTypes(EnumSet.of(LinkType.URL, LinkType.WWW))
-                    .build();
-            Iterable<LinkSpan> linkss = linkExtractor.extractLinks(txt);
-            for (LinkSpan ls : linkss) {
-                links.add(txt.substring(ls.getBeginIndex(), ls.getEndIndex()));
-            }
+    public static boolean isMatch(final String pattern, final String input) {
+        return isMatch(Pattern.compile(pattern), input);
+    }
 
-            String[] linksarray = new String[links.size()];
-            linksarray = links.toArray(linksarray);
-            return linksarray;
-        } catch (Exception e) {
-            throw new ParsingException("Could not get links from string", e);
-        }
+    public static boolean isMatch(@Nonnull final Pattern pattern, final String input) {
+        return pattern.matcher(input).find();
+    }
+
+    @Nonnull
+    public static Map<String, String> compatParseMap(@Nonnull final String input) {
+        return Arrays.stream(input.split("&"))
+                .map(arg -> arg.split("="))
+                .filter(splitArg -> splitArg.length > 1)
+                .collect(Collectors.toMap(splitArg -> splitArg[0],
+                        splitArg -> Utils.decodeUrlUtf8(splitArg[1]),
+                        (existing, replacement) -> replacement));
     }
 }

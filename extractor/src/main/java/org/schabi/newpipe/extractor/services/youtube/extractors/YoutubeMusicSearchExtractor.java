@@ -1,38 +1,49 @@
 package org.schabi.newpipe.extractor.services.youtube.extractors;
 
-import com.grack.nanojson.*;
+import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.DISABLE_PRETTY_PRINT_PARAMETER;
+import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.getTextFromObject;
+import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.getValidJsonResponseBody;
+import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.getYoutubeMusicClientVersion;
+import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.getYoutubeMusicHeaders;
+import static org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeSearchQueryHandlerFactory.MUSIC_ALBUMS;
+import static org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeSearchQueryHandlerFactory.MUSIC_ARTISTS;
+import static org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeSearchQueryHandlerFactory.MUSIC_PLAYLISTS;
+import static org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeSearchQueryHandlerFactory.MUSIC_SONGS;
+import static org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeSearchQueryHandlerFactory.MUSIC_VIDEOS;
+import static org.schabi.newpipe.extractor.utils.Utils.isNullOrEmpty;
+
+import com.grack.nanojson.JsonArray;
+import com.grack.nanojson.JsonObject;
+import com.grack.nanojson.JsonParser;
+import com.grack.nanojson.JsonParserException;
+import com.grack.nanojson.JsonWriter;
+
 import org.schabi.newpipe.extractor.InfoItem;
 import org.schabi.newpipe.extractor.MetaInfo;
+import org.schabi.newpipe.extractor.MultiInfoItemsCollector;
 import org.schabi.newpipe.extractor.Page;
 import org.schabi.newpipe.extractor.StreamingService;
 import org.schabi.newpipe.extractor.downloader.Downloader;
 import org.schabi.newpipe.extractor.exceptions.ExtractionException;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
-import org.schabi.newpipe.extractor.exceptions.ReCaptchaException;
 import org.schabi.newpipe.extractor.linkhandler.SearchQueryHandler;
-import org.schabi.newpipe.extractor.localization.DateWrapper;
-import org.schabi.newpipe.extractor.localization.TimeAgoParser;
-import org.schabi.newpipe.extractor.search.InfoItemsSearchCollector;
 import org.schabi.newpipe.extractor.search.SearchExtractor;
-import org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper;
 import org.schabi.newpipe.extractor.utils.JsonUtils;
-import org.schabi.newpipe.extractor.utils.Parser;
-import org.schabi.newpipe.extractor.utils.Utils;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import static org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper.*;
-import static org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeSearchQueryHandlerFactory.*;
-import static org.schabi.newpipe.extractor.utils.Utils.*;
 
 public class YoutubeMusicSearchExtractor extends SearchExtractor {
     private JsonObject initialData;
+
+    private List<JsonObject> cachedItemSectionRendererContents;
 
     public YoutubeMusicSearchExtractor(final StreamingService service,
                                        final SearchQueryHandler linkHandler) {
@@ -42,10 +53,8 @@ public class YoutubeMusicSearchExtractor extends SearchExtractor {
     @Override
     public void onFetchPage(@Nonnull final Downloader downloader)
             throws IOException, ExtractionException {
-        final String[] youtubeMusicKeys = YoutubeParsingHelper.getYoutubeMusicKey();
-
-        final String url = "https://music.youtube.com/youtubei/v1/search?alt=json&key="
-                + youtubeMusicKeys[0];
+        final String url = "https://music.youtube.com/youtubei/v1/search?"
+                + DISABLE_PRETTY_PRINT_PARAMETER;
 
         final String params;
 
@@ -76,39 +85,30 @@ public class YoutubeMusicSearchExtractor extends SearchExtractor {
                 .object("context")
                     .object("client")
                         .value("clientName", "WEB_REMIX")
-                        .value("clientVersion", youtubeMusicKeys[2])
+                        .value("clientVersion", getYoutubeMusicClientVersion())
                         .value("hl", "en-GB")
                         .value("gl", getExtractorContentCountry().getCountryCode())
-                        .array("experimentIds").end()
-                        .value("experimentsToken", EMPTY_STRING)
-                        .object("locationInfo").end()
-                        .object("musicAppInfo").end()
+                        .value("platform", "DESKTOP")
+                        .value("utcOffsetMinutes", 0)
                     .end()
-                    .object("capabilities").end()
                     .object("request")
-                        .array("internalExperimentFlags").end()
-                        .object("sessionIndex").end()
+                        .array("internalExperimentFlags")
+                        .end()
+                        .value("useSsl", true)
                     .end()
-                    .object("activePlayers").end()
                     .object("user")
-                        // TO DO: provide a way to enable restricted mode with:
-                        .value("enableSafetyMode", false)
+                        // TODO: provide a way to enable restricted mode with:
+                        //  .value("enableSafetyMode", boolean)
+                        .value("lockedSafetyMode", false)
                     .end()
                 .end()
                 .value("query", getSearchString())
                 .value("params", params)
-            .end().done().getBytes(UTF_8);
+            .end().done().getBytes(StandardCharsets.UTF_8);
         // @formatter:on
 
-        final Map<String, List<String>> headers = new HashMap<>();
-        headers.put("X-YouTube-Client-Name", Collections.singletonList(youtubeMusicKeys[1]));
-        headers.put("X-YouTube-Client-Version", Collections.singletonList(youtubeMusicKeys[2]));
-        headers.put("Origin", Collections.singletonList("https://music.youtube.com"));
-        headers.put("Referer", Collections.singletonList("music.youtube.com"));
-        headers.put("Content-Type", Collections.singletonList("application/json"));
-
-        final String responseBody = getValidJsonResponseBody(getDownloader().post(url, headers,
-                json));
+        final String responseBody = getValidJsonResponseBody(
+                getDownloader().postWithContentTypeJson(url, getYoutubeMusicHeaders(), json));
 
         try {
             initialData = JsonParser.object().from(responseBody);
@@ -117,55 +117,61 @@ public class YoutubeMusicSearchExtractor extends SearchExtractor {
         }
     }
 
-    @Nonnull
-    @Override
-    public String getUrl() throws ParsingException {
-        return super.getUrl();
+    private List<JsonObject> getItemSectionRendererContents() {
+        if (cachedItemSectionRendererContents != null) {
+            return cachedItemSectionRendererContents;
+        }
+
+        cachedItemSectionRendererContents = initialData
+                .getObject("contents")
+                .getObject("tabbedSearchResultsRenderer")
+                .getArray("tabs")
+                .getObject(0)
+                .getObject("tabRenderer")
+                .getObject("content")
+                .getObject("sectionListRenderer")
+                .getArray("contents")
+                .stream()
+                .filter(JsonObject.class::isInstance)
+                .map(JsonObject.class::cast)
+                .map(c -> c.getObject("itemSectionRenderer"))
+                .filter(isr -> !isr.isEmpty())
+                .map(isr -> isr
+                        .getArray("contents")
+                        .getObject(0))
+                .collect(Collectors.toList());
+        return cachedItemSectionRendererContents;
     }
 
     @Nonnull
     @Override
     public String getSearchSuggestion() throws ParsingException {
-        final JsonObject itemSectionRenderer = JsonUtils.getArray(JsonUtils.getArray(initialData,
-                "contents.tabbedSearchResultsRenderer.tabs").getObject(0),
-                "tabRenderer.content.sectionListRenderer.contents")
-                .getObject(0)
-                .getObject("itemSectionRenderer");
-        if (itemSectionRenderer.isEmpty()) {
-            return "";
-        }
+        for (final JsonObject obj : getItemSectionRendererContents()) {
+            final JsonObject didYouMeanRenderer = obj
+                    .getObject("didYouMeanRenderer");
 
-        final JsonObject didYouMeanRenderer = itemSectionRenderer.getArray("contents")
-                .getObject(0).getObject("didYouMeanRenderer");
-        final JsonObject showingResultsForRenderer = itemSectionRenderer.getArray("contents")
-                .getObject(0)
+            if (!didYouMeanRenderer.isEmpty()) {
+                return getTextFromObject(didYouMeanRenderer.getObject("correctedQuery"));
+            }
+
+            // NOTE: As of 2025-07 "showing results for ..." doesn't seem to be returned by
+            // the backend anymore, however the code is still present in the JS frontend.
+            final JsonObject showingResultsForRenderer = obj
                 .getObject("showingResultsForRenderer");
-
-        if (!didYouMeanRenderer.isEmpty()) {
-            return getTextFromObject(didYouMeanRenderer.getObject("correctedQuery"));
-        } else if (!showingResultsForRenderer.isEmpty()) {
-            return JsonUtils.getString(showingResultsForRenderer,
-                    "correctedQueryEndpoint.searchEndpoint.query");
-        } else {
-            return "";
+            if (!showingResultsForRenderer.isEmpty()) {
+                return JsonUtils.getString(showingResultsForRenderer,
+                        "correctedQueryEndpoint.searchEndpoint.query");
+            }
         }
+
+        return "";
     }
 
     @Override
     public boolean isCorrectedSearch() throws ParsingException {
-        final JsonObject itemSectionRenderer = JsonUtils.getArray(JsonUtils.getArray(initialData,
-                "contents.tabbedSearchResultsRenderer.tabs").getObject(0),
-                "tabRenderer.content.sectionListRenderer.contents")
-                .getObject(0)
-                .getObject("itemSectionRenderer");
-        if (itemSectionRenderer.isEmpty()) {
-            return false;
-        }
-
-        JsonObject firstContent = itemSectionRenderer.getArray("contents").getObject(0);
-
-        return firstContent.has("didYouMeanRenderer")
-                || firstContent.has("showingResultsForRenderer");
+        return getItemSectionRendererContents()
+                .stream()
+                .anyMatch(obj -> obj.has("showingResultsForRenderer"));
     }
 
     @Nonnull
@@ -177,7 +183,7 @@ public class YoutubeMusicSearchExtractor extends SearchExtractor {
     @Nonnull
     @Override
     public InfoItemsPage<InfoItem> getInitialPage() throws IOException, ExtractionException {
-        final InfoItemsSearchCollector collector = new InfoItemsSearchCollector(getServiceId());
+        final MultiInfoItemsCollector collector = new MultiInfoItemsCollector(getServiceId());
 
         final JsonArray contents = JsonUtils.getArray(JsonUtils.getArray(initialData,
                 "contents.tabbedSearchResultsRenderer.tabs").getObject(0),
@@ -206,47 +212,37 @@ public class YoutubeMusicSearchExtractor extends SearchExtractor {
             throw new IllegalArgumentException("Page doesn't contain an URL");
         }
 
-        final InfoItemsSearchCollector collector = new InfoItemsSearchCollector(getServiceId());
-
-        final String[] youtubeMusicKeys = YoutubeParsingHelper.getYoutubeMusicKey();
+        final MultiInfoItemsCollector collector = new MultiInfoItemsCollector(getServiceId());
 
         // @formatter:off
-        byte[] json = JsonWriter.string()
+        final byte[] json = JsonWriter.string()
             .object()
                 .object("context")
                     .object("client")
                         .value("clientName", "WEB_REMIX")
-                        .value("clientVersion", youtubeMusicKeys[2])
-                        .value("hl", "en")
+                        .value("clientVersion", getYoutubeMusicClientVersion())
+                        .value("hl", "en-GB")
                         .value("gl", getExtractorContentCountry().getCountryCode())
-                        .array("experimentIds").end()
-                        .value("experimentsToken", "")
+                        .value("platform", "DESKTOP")
                         .value("utcOffsetMinutes", 0)
-                        .object("locationInfo").end()
-                        .object("musicAppInfo").end()
                     .end()
-                    .object("capabilities").end()
                     .object("request")
-                        .array("internalExperimentFlags").end()
-                        .object("sessionIndex").end()
+                        .array("internalExperimentFlags")
+                        .end()
+                        .value("useSsl", true)
                     .end()
-                    .object("activePlayers").end()
                     .object("user")
-                        .value("enableSafetyMode", false)
+                        // TODO: provide a way to enable restricted mode with:
+                        //  .value("enableSafetyMode", boolean)
+                        .value("lockedSafetyMode", false)
                     .end()
                 .end()
-            .end().done().getBytes(UTF_8);
+            .end().done().getBytes(StandardCharsets.UTF_8);
         // @formatter:on
 
-        final Map<String, List<String>> headers = new HashMap<>();
-        headers.put("X-YouTube-Client-Name", Collections.singletonList(youtubeMusicKeys[1]));
-        headers.put("X-YouTube-Client-Version", Collections.singletonList(youtubeMusicKeys[2]));
-        headers.put("Origin", Collections.singletonList("https://music.youtube.com"));
-        headers.put("Referer", Collections.singletonList("music.youtube.com"));
-        headers.put("Content-Type", Collections.singletonList("application/json"));
-
-        final String responseBody = getValidJsonResponseBody(getDownloader().post(page.getUrl(),
-                headers, json));
+        final String responseBody = getValidJsonResponseBody(
+                getDownloader().postWithContentTypeJson(
+                        page.getUrl(), getYoutubeMusicHeaders(), json));
 
         final JsonObject ajaxJson;
         try {
@@ -264,318 +260,48 @@ public class YoutubeMusicSearchExtractor extends SearchExtractor {
         return new InfoItemsPage<>(collector, getNextPageFrom(continuations));
     }
 
-    private void collectMusicStreamsFrom(final InfoItemsSearchCollector collector,
+    private void collectMusicStreamsFrom(final MultiInfoItemsCollector collector,
                                          @Nonnull final JsonArray videos) {
-        final TimeAgoParser timeAgoParser = getTimeAgoParser();
+        final String searchType = getLinkHandler().getContentFilters().get(0);
+        videos.stream()
+                .filter(JsonObject.class::isInstance)
+                .map(JsonObject.class::cast)
+                .map(item -> item.getObject("musicResponsiveListItemRenderer", null))
+                .filter(Objects::nonNull)
+                .forEachOrdered(infoItem -> {
+                    final String displayPolicy = infoItem.getString(
+                            "musicItemRendererDisplayPolicy", "");
+                    if (displayPolicy.equals("MUSIC_ITEM_RENDERER_DISPLAY_POLICY_GREY_OUT")) {
+                        // No info about URL available
+                        return;
+                    }
 
-        for (final Object item : videos) {
-            final JsonObject info = ((JsonObject) item)
-                    .getObject("musicResponsiveListItemRenderer", null);
-            if (info != null) {
-                final String displayPolicy = info.getString("musicItemRendererDisplayPolicy",
-                        EMPTY_STRING);
-                if (displayPolicy.equals("MUSIC_ITEM_RENDERER_DISPLAY_POLICY_GREY_OUT")) {
-                    continue; // No info about video URL available
-                }
+                    final JsonArray descriptionElements = infoItem.getArray("flexColumns")
+                            .getObject(1)
+                            .getObject("musicResponsiveListItemFlexColumnRenderer")
+                            .getObject("text")
+                            .getArray("runs");
 
-                final JsonObject flexColumnRenderer = info.getArray("flexColumns")
-                        .getObject(1)
-                        .getObject("musicResponsiveListItemFlexColumnRenderer");
-                final JsonArray descriptionElements = flexColumnRenderer.getObject("text")
-                        .getArray("runs");
-                final String searchType = getLinkHandler().getContentFilters().get(0);
-                if (searchType.equals(MUSIC_SONGS) || searchType.equals(MUSIC_VIDEOS)) {
-                    collector.commit(new YoutubeStreamInfoItemExtractor(info, timeAgoParser) {
-                        @Override
-                        public String getUrl() throws ParsingException {
-                            final String id = info.getObject("playlistItemData")
-                                    .getString("videoId");
-                            if (!isNullOrEmpty(id)) {
-                                return "https://music.youtube.com/watch?v=" + id;
-                            }
-                            throw new ParsingException("Could not get url");
-                        }
-
-                        @Override
-                        public String getName() throws ParsingException {
-                            final String name = getTextFromObject(info.getArray("flexColumns")
-                                    .getObject(0)
-                                    .getObject("musicResponsiveListItemFlexColumnRenderer")
-                                    .getObject("text"));
-                            if (!isNullOrEmpty(name)) {
-                                return name;
-                            }
-                            throw new ParsingException("Could not get name");
-                        }
-
-                        @Override
-                        public long getDuration() throws ParsingException {
-                            final String duration = descriptionElements
-                                    .getObject(descriptionElements.size() - 1)
-                                    .getString("text");
-                            if (!isNullOrEmpty(duration)) {
-                                return YoutubeParsingHelper.parseDurationString(duration);
-                            }
-                            throw new ParsingException("Could not get duration");
-                        }
-
-                        @Override
-                        public String getUploaderName() throws ParsingException {
-                            final String name = descriptionElements.getObject(0).getString("text");
-                            if (!isNullOrEmpty(name)) {
-                                return name;
-                            }
-                            throw new ParsingException("Could not get uploader name");
-                        }
-
-                        @Override
-                        public String getUploaderUrl() throws ParsingException {
-                            if (searchType.equals(MUSIC_VIDEOS)) {
-                                JsonArray items = info.getObject("menu").getObject("menuRenderer")
-                                        .getArray("items");
-                                for (final Object item : items) {
-                                    final JsonObject menuNavigationItemRenderer =
-                                            ((JsonObject) item).getObject(
-                                                    "menuNavigationItemRenderer");
-                                    if (menuNavigationItemRenderer.getObject("icon")
-                                            .getString("iconType", EMPTY_STRING)
-                                            .equals("ARTIST")) {
-                                        return getUrlFromNavigationEndpoint(
-                                                menuNavigationItemRenderer
-                                                        .getObject("navigationEndpoint"));
-                                    }
-                                }
-
-                                return null;
-                            } else {
-                                final JsonObject navigationEndpointHolder = info
-                                        .getArray("flexColumns")
-                                        .getObject(1)
-                                        .getObject("musicResponsiveListItemFlexColumnRenderer")
-                                        .getObject("text").getArray("runs").getObject(0);
-
-                                if (!navigationEndpointHolder.has("navigationEndpoint"))
-                                    return null;
-
-                                final String url = getUrlFromNavigationEndpoint(
-                                        navigationEndpointHolder.getObject("navigationEndpoint"));
-
-                                if (!isNullOrEmpty(url)) {
-                                    return url;
-                                }
-
-                                throw new ParsingException("Could not get uploader URL");
-                            }
-                        }
-
-                        @Override
-                        public String getTextualUploadDate() {
-                            return null;
-                        }
-
-                        @Override
-                        public DateWrapper getUploadDate() {
-                            return null;
-                        }
-
-                        @Override
-                        public long getViewCount() throws ParsingException {
-                            if (searchType.equals(MUSIC_SONGS)) {
-                                return -1;
-                            }
-                            final String viewCount = descriptionElements
-                                    .getObject(descriptionElements.size() - 3)
-                                    .getString("text");
-                            if (!isNullOrEmpty(viewCount)) {
-                                try {
-                                    return Utils.mixedNumberWordToLong(viewCount);
-                                } catch (final Parser.RegexException e) {
-                                    // probably viewCount == "No views" or similar
-                                    return 0;
-                                }
-                            }
-                            throw new ParsingException("Could not get view count");
-                        }
-
-                        @Override
-                        public String getThumbnailUrl() throws ParsingException {
-                            try {
-                                final JsonArray thumbnails = info.getObject("thumbnail")
-                                        .getObject("musicThumbnailRenderer")
-                                        .getObject("thumbnail").getArray("thumbnails");
-                                // the last thumbnail is the one with the highest resolution
-                                final String url = thumbnails.getObject(thumbnails.size() - 1)
-                                        .getString("url");
-
-                                return fixThumbnailUrl(url);
-                            } catch (final Exception e) {
-                                throw new ParsingException("Could not get thumbnail url", e);
-                            }
-                        }
-                    });
-                } else if (searchType.equals(MUSIC_ARTISTS)) {
-                    collector.commit(new YoutubeChannelInfoItemExtractor(info) {
-                        @Override
-                        public String getThumbnailUrl() throws ParsingException {
-                            try {
-                                final JsonArray thumbnails = info.getObject("thumbnail")
-                                        .getObject("musicThumbnailRenderer")
-                                        .getObject("thumbnail").getArray("thumbnails");
-                                // the last thumbnail is the one with the highest resolution
-                                final String url = thumbnails.getObject(thumbnails.size() - 1)
-                                        .getString("url");
-
-                                return fixThumbnailUrl(url);
-                            } catch (final Exception e) {
-                                throw new ParsingException("Could not get thumbnail url", e);
-                            }
-                        }
-
-                        @Override
-                        public String getName() throws ParsingException {
-                            final String name = getTextFromObject(info.getArray("flexColumns")
-                                    .getObject(0)
-                                    .getObject("musicResponsiveListItemFlexColumnRenderer")
-                                    .getObject("text"));
-                            if (!isNullOrEmpty(name)) {
-                                return name;
-                            }
-                            throw new ParsingException("Could not get name");
-                        }
-
-                        @Override
-                        public String getUrl() throws ParsingException {
-                            final String url = getUrlFromNavigationEndpoint(info
-                                    .getObject("navigationEndpoint"));
-                            if (!isNullOrEmpty(url)) {
-                                return url;
-                            }
-                            throw new ParsingException("Could not get url");
-                        }
-
-                        @Override
-                        public long getSubscriberCount() throws ParsingException {
-                            final String subscriberCount = getTextFromObject(info
-                                    .getArray("flexColumns").getObject(2)
-                                    .getObject("musicResponsiveListItemFlexColumnRenderer")
-                                    .getObject("text"));
-                            if (!isNullOrEmpty(subscriberCount)) {
-                                try {
-                                    return Utils.mixedNumberWordToLong(subscriberCount);
-                                } catch (final Parser.RegexException ignored) {
-                                    // probably subscriberCount == "No subscribers" or similar
-                                    return 0;
-                                }
-                            }
-                            throw new ParsingException("Could not get subscriber count");
-                        }
-
-                        @Override
-                        public long getStreamCount() {
-                            return -1;
-                        }
-
-                        @Override
-                        public String getDescription() {
-                            return null;
-                        }
-                    });
-                } else if (searchType.equals(MUSIC_ALBUMS) || searchType.equals(MUSIC_PLAYLISTS)) {
-                    collector.commit(new YoutubePlaylistInfoItemExtractor(info) {
-                        @Override
-                        public String getThumbnailUrl() throws ParsingException {
-                            try {
-                                final JsonArray thumbnails = info.getObject("thumbnail")
-                                        .getObject("musicThumbnailRenderer")
-                                        .getObject("thumbnail").getArray("thumbnails");
-                                // the last thumbnail is the one with the highest resolution
-                                final String url = thumbnails.getObject(thumbnails.size() - 1)
-                                        .getString("url");
-
-                                return fixThumbnailUrl(url);
-                            } catch (final Exception e) {
-                                throw new ParsingException("Could not get thumbnail url", e);
-                            }
-                        }
-
-                        @Override
-                        public String getName() throws ParsingException {
-                            final String name = getTextFromObject(info.getArray("flexColumns")
-                                    .getObject(0)
-                                    .getObject("musicResponsiveListItemFlexColumnRenderer")
-                                    .getObject("text"));
-                            if (!isNullOrEmpty(name)) {
-                                return name;
-                            }
-                            throw new ParsingException("Could not get name");
-                        }
-
-                        @Override
-                        public String getUrl() throws ParsingException {
-                            String playlistId = info.getObject("menu")
-                                    .getObject("menuRenderer")
-                                    .getArray("items")
-                                    .getObject(4)
-                                    .getObject("toggleMenuServiceItemRenderer")
-                                    .getObject("toggledServiceEndpoint")
-                                    .getObject("likeEndpoint")
-                                    .getObject("target")
-                                    .getString("playlistId");
-
-                            if (isNullOrEmpty(playlistId)) {
-                                playlistId = info.getObject("overlay")
-                                        .getObject("musicItemThumbnailOverlayRenderer")
-                                        .getObject("content")
-                                        .getObject("musicPlayButtonRenderer")
-                                        .getObject("playNavigationEndpoint")
-                                        .getObject("watchPlaylistEndpoint")
-                                        .getString("playlistId");
-                            }
-                            if (!isNullOrEmpty(playlistId)) {
-                                return "https://music.youtube.com/playlist?list=" + playlistId;
-                            }
-                            throw new ParsingException("Could not get url");
-                        }
-
-                        @Override
-                        public String getUploaderName() throws ParsingException {
-                            final String name;
-                            if (searchType.equals(MUSIC_ALBUMS)) {
-                                name = descriptionElements.getObject(2).getString("text");
-                            } else {
-                                name = descriptionElements.getObject(0).getString("text");
-                            }
-                            if (!isNullOrEmpty(name)) {
-                                return name;
-                            }
-                            throw new ParsingException("Could not get uploader name");
-                        }
-
-                        @Override
-                        public long getStreamCount() throws ParsingException {
-                            if (searchType.equals(MUSIC_ALBUMS)) {
-                                return ITEM_COUNT_UNKNOWN;
-                            }
-                            final String count = descriptionElements.getObject(2)
-                                    .getString("text");
-                            if (!isNullOrEmpty(count)) {
-                                if (count.contains("100+")) {
-                                    return ITEM_COUNT_MORE_THAN_100;
-                                } else {
-                                    return Long.parseLong(Utils.removeNonDigitCharacters(count));
-                                }
-                            }
-                            throw new ParsingException("Could not get count");
-                        }
-                    });
-                }
-            }
-        }
+                    switch (searchType) {
+                        case MUSIC_SONGS:
+                        case MUSIC_VIDEOS:
+                            collector.commit(new YoutubeMusicSongOrVideoInfoItemExtractor(
+                                    infoItem, descriptionElements, searchType));
+                            break;
+                        case MUSIC_ARTISTS:
+                            collector.commit(new YoutubeMusicArtistInfoItemExtractor(infoItem));
+                            break;
+                        case MUSIC_ALBUMS:
+                        case MUSIC_PLAYLISTS:
+                            collector.commit(new YoutubeMusicAlbumOrPlaylistInfoItemExtractor(
+                                    infoItem, descriptionElements, searchType));
+                            break;
+                    }
+                });
     }
 
     @Nullable
-    private Page getNextPageFrom(final JsonArray continuations)
-            throws IOException, ParsingException, ReCaptchaException {
+    private Page getNextPageFrom(final JsonArray continuations) {
         if (isNullOrEmpty(continuations)) {
             return null;
         }
@@ -585,7 +311,6 @@ public class YoutubeMusicSearchExtractor extends SearchExtractor {
         final String continuation = nextContinuationData.getString("continuation");
 
         return new Page("https://music.youtube.com/youtubei/v1/search?ctoken=" + continuation
-                + "&continuation=" + continuation + "&alt=json" + "&key="
-                + YoutubeParsingHelper.getYoutubeMusicKey()[0]);
+                + "&continuation=" + continuation + "&" + DISABLE_PRETTY_PRINT_PARAMETER);
     }
 }

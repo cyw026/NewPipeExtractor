@@ -3,15 +3,20 @@
 package org.schabi.newpipe.extractor.services.bandcamp.extractors;
 
 import com.grack.nanojson.JsonObject;
+import org.schabi.newpipe.extractor.Image;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.localization.DateWrapper;
 import org.schabi.newpipe.extractor.stream.StreamInfoItemExtractor;
 import org.schabi.newpipe.extractor.stream.StreamType;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import java.util.List;
+
 import static org.schabi.newpipe.extractor.services.bandcamp.extractors.BandcampExtractorHelper.BASE_URL;
-import static org.schabi.newpipe.extractor.services.bandcamp.extractors.BandcampExtractorHelper.getImageUrl;
+import static org.schabi.newpipe.extractor.services.bandcamp.extractors.BandcampExtractorHelper.getImagesFromImageId;
+import static org.schabi.newpipe.extractor.services.bandcamp.extractors.BandcampExtractorHelper.parseDate;
 
 public class BandcampRadioInfoItemExtractor implements StreamInfoItemExtractor {
 
@@ -23,12 +28,17 @@ public class BandcampRadioInfoItemExtractor implements StreamInfoItemExtractor {
 
     @Override
     public long getDuration() {
-        /* Duration is only present in the more detailed information that has to be queried separately.
-         * Therefore, over 300 queries would be needed every time the kiosk is opened if we were to
-         * display the real value.
-         */
+        /* Duration is only present in the more detailed information that has to be queried
+        separately. Therefore, over 300 queries would be needed every time the kiosk is opened if we
+        were to display the real value. */
         //return query(show.getInt("id")).getLong("audio_duration");
         return 0;
+    }
+
+    @Nullable
+    @Override
+    public String getShortDescription() {
+        return show.getString("desc");
     }
 
     @Nullable
@@ -40,7 +50,7 @@ public class BandcampRadioInfoItemExtractor implements StreamInfoItemExtractor {
     @Nullable
     @Override
     public DateWrapper getUploadDate() throws ParsingException {
-        return BandcampExtractorHelper.parseDate(getTextualUploadDate());
+        return parseDate(getTextualUploadDate());
     }
 
     @Override
@@ -53,9 +63,10 @@ public class BandcampRadioInfoItemExtractor implements StreamInfoItemExtractor {
         return BASE_URL + "/?show=" + show.getInt("id");
     }
 
+    @Nonnull
     @Override
-    public String getThumbnailUrl() {
-        return getImageUrl(show.getLong("image_id"), false);
+    public List<Image> getThumbnails() {
+        return getImagesFromImageId(show.getLong("image_id"), false);
     }
 
     @Override
@@ -70,19 +81,13 @@ public class BandcampRadioInfoItemExtractor implements StreamInfoItemExtractor {
 
     @Override
     public String getUploaderName() {
-        // JSON does not contain uploader name
-        return "";
+        // The "title" field contains the title of the series, e.g. "Bandcamp Weekly".
+        return show.getString("title");
     }
 
     @Override
     public String getUploaderUrl() {
         return "";
-    }
-
-    @Nullable
-    @Override
-    public String getUploaderAvatarUrl() {
-        return null;
     }
 
     @Override

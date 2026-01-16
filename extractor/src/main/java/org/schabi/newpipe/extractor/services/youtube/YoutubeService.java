@@ -1,16 +1,23 @@
 package org.schabi.newpipe.extractor.services.youtube;
 
+import static org.schabi.newpipe.extractor.StreamingService.ServiceInfo.MediaCapability.AUDIO;
+import static org.schabi.newpipe.extractor.StreamingService.ServiceInfo.MediaCapability.COMMENTS;
+import static org.schabi.newpipe.extractor.StreamingService.ServiceInfo.MediaCapability.LIVE;
+import static org.schabi.newpipe.extractor.StreamingService.ServiceInfo.MediaCapability.VIDEO;
+import static java.util.Arrays.asList;
+
 import org.schabi.newpipe.extractor.StreamingService;
 import org.schabi.newpipe.extractor.channel.ChannelExtractor;
+import org.schabi.newpipe.extractor.channel.tabs.ChannelTabExtractor;
 import org.schabi.newpipe.extractor.comments.CommentsExtractor;
 import org.schabi.newpipe.extractor.exceptions.ExtractionException;
 import org.schabi.newpipe.extractor.feed.FeedExtractor;
-import org.schabi.newpipe.extractor.kiosk.KioskExtractor;
 import org.schabi.newpipe.extractor.kiosk.KioskList;
 import org.schabi.newpipe.extractor.linkhandler.LinkHandler;
 import org.schabi.newpipe.extractor.linkhandler.LinkHandlerFactory;
 import org.schabi.newpipe.extractor.linkhandler.ListLinkHandler;
 import org.schabi.newpipe.extractor.linkhandler.ListLinkHandlerFactory;
+import org.schabi.newpipe.extractor.linkhandler.ReadyChannelTabListLinkHandler;
 import org.schabi.newpipe.extractor.linkhandler.SearchQueryHandler;
 import org.schabi.newpipe.extractor.linkhandler.SearchQueryHandlerFactory;
 import org.schabi.newpipe.extractor.localization.ContentCountry;
@@ -18,6 +25,7 @@ import org.schabi.newpipe.extractor.localization.Localization;
 import org.schabi.newpipe.extractor.playlist.PlaylistExtractor;
 import org.schabi.newpipe.extractor.search.SearchExtractor;
 import org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeChannelExtractor;
+import org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeChannelTabExtractor;
 import org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeCommentsExtractor;
 import org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeFeedExtractor;
 import org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeMixPlaylistExtractor;
@@ -27,13 +35,24 @@ import org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeSearchExt
 import org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeStreamExtractor;
 import org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeSubscriptionExtractor;
 import org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeSuggestionExtractor;
-import org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeTrendingExtractor;
+import org.schabi.newpipe.extractor.services.youtube.extractors.kiosk.YoutubeTrendingExtractor;
+import org.schabi.newpipe.extractor.services.youtube.extractors.kiosk.YoutubeLiveExtractor;
+import org.schabi.newpipe.extractor.services.youtube.extractors.kiosk.YoutubeTrendingGamingVideosExtractor;
+import org.schabi.newpipe.extractor.services.youtube.extractors.kiosk.YoutubeTrendingMoviesAndShowsTrailersExtractor;
+import org.schabi.newpipe.extractor.services.youtube.extractors.kiosk.YoutubeTrendingMusicExtractor;
+import org.schabi.newpipe.extractor.services.youtube.extractors.kiosk.YoutubeTrendingPodcastsEpisodesExtractor;
 import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeChannelLinkHandlerFactory;
+import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeChannelTabLinkHandlerFactory;
 import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeCommentsLinkHandlerFactory;
+import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeLiveLinkHandlerFactory;
 import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubePlaylistLinkHandlerFactory;
 import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeSearchQueryHandlerFactory;
 import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeStreamLinkHandlerFactory;
+import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeTrendingGamingVideosLinkHandlerFactory;
 import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeTrendingLinkHandlerFactory;
+import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeTrendingMoviesAndShowsTrailersLinkHandlerFactory;
+import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeTrendingMusicLinkHandlerFactory;
+import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeTrendingPodcastsEpisodesLinkHandlerFactory;
 import org.schabi.newpipe.extractor.stream.StreamExtractor;
 import org.schabi.newpipe.extractor.subscription.SubscriptionExtractor;
 import org.schabi.newpipe.extractor.suggestion.SuggestionExtractor;
@@ -42,35 +61,29 @@ import java.util.List;
 
 import javax.annotation.Nonnull;
 
-import static java.util.Arrays.asList;
-import static org.schabi.newpipe.extractor.StreamingService.ServiceInfo.MediaCapability.AUDIO;
-import static org.schabi.newpipe.extractor.StreamingService.ServiceInfo.MediaCapability.COMMENTS;
-import static org.schabi.newpipe.extractor.StreamingService.ServiceInfo.MediaCapability.LIVE;
-import static org.schabi.newpipe.extractor.StreamingService.ServiceInfo.MediaCapability.VIDEO;
-
 /*
  * Created by Christian Schabesberger on 23.08.15.
  *
- * Copyright (C) Christian Schabesberger 2018 <chris.schabesberger@mailbox.org>
- * YoutubeService.java is part of NewPipe.
+ * Copyright (C) 2018 Christian Schabesberger <chris.schabesberger@mailbox.org>
+ * YoutubeService.java is part of NewPipe Extractor.
  *
- * NewPipe is free software: you can redistribute it and/or modify
+ * NewPipe Extractor is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * NewPipe is distributed in the hope that it will be useful,
+ * NewPipe Extractor is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with NewPipe.  If not, see <http://www.gnu.org/licenses/>.
+ * along with NewPipe Extractor.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 public class YoutubeService extends StreamingService {
 
-    public YoutubeService(int id) {
+    public YoutubeService(final int id) {
         super(id, "YouTube", asList(AUDIO, VIDEO, LIVE, COMMENTS));
     }
 
@@ -90,6 +103,11 @@ public class YoutubeService extends StreamingService {
     }
 
     @Override
+    public ListLinkHandlerFactory getChannelTabLHFactory() {
+        return YoutubeChannelTabLinkHandlerFactory.getInstance();
+    }
+
+    @Override
     public ListLinkHandlerFactory getPlaylistLHFactory() {
         return YoutubePlaylistLinkHandlerFactory.getInstance();
     }
@@ -100,19 +118,27 @@ public class YoutubeService extends StreamingService {
     }
 
     @Override
-    public StreamExtractor getStreamExtractor(LinkHandler linkHandler) {
+    public StreamExtractor getStreamExtractor(final LinkHandler linkHandler) {
         return new YoutubeStreamExtractor(this, linkHandler);
     }
 
     @Override
-    public ChannelExtractor getChannelExtractor(ListLinkHandler linkHandler) {
+    public ChannelExtractor getChannelExtractor(final ListLinkHandler linkHandler) {
         return new YoutubeChannelExtractor(this, linkHandler);
     }
 
     @Override
+    public ChannelTabExtractor getChannelTabExtractor(final ListLinkHandler linkHandler) {
+        if (linkHandler instanceof ReadyChannelTabListLinkHandler) {
+            return ((ReadyChannelTabListLinkHandler) linkHandler).getChannelTabExtractor(this);
+        } else {
+            return new YoutubeChannelTabExtractor(this, linkHandler);
+        }
+    }
+
+    @Override
     public PlaylistExtractor getPlaylistExtractor(final ListLinkHandler linkHandler) {
-        if (YoutubeParsingHelper.isYoutubeMixId(linkHandler.getId())
-                && !YoutubeParsingHelper.isYoutubeMusicMixId(linkHandler.getId())) {
+        if (YoutubeParsingHelper.isYoutubeMixId(linkHandler.getId())) {
             return new YoutubeMixPlaylistExtractor(this, linkHandler);
         } else {
             return new YoutubePlaylistExtractor(this, linkHandler);
@@ -120,7 +146,7 @@ public class YoutubeService extends StreamingService {
     }
 
     @Override
-    public SearchExtractor getSearchExtractor(SearchQueryHandler query) {
+    public SearchExtractor getSearchExtractor(final SearchQueryHandler query) {
         final List<String> contentFilters = query.getContentFilters();
 
         if (!contentFilters.isEmpty() && contentFilters.get(0).startsWith("music_")) {
@@ -137,22 +163,73 @@ public class YoutubeService extends StreamingService {
 
     @Override
     public KioskList getKioskList() throws ExtractionException {
-        KioskList list = new KioskList(this);
+        final KioskList list = new KioskList(this);
+        final ListLinkHandlerFactory trendingLHF = YoutubeTrendingLinkHandlerFactory.INSTANCE;
+        final ListLinkHandlerFactory runningLivesLHF =
+                YoutubeLiveLinkHandlerFactory.INSTANCE;
+        final ListLinkHandlerFactory trendingPodcastsEpisodesLHF =
+                YoutubeTrendingPodcastsEpisodesLinkHandlerFactory.INSTANCE;
+        final ListLinkHandlerFactory trendingGamingVideosLHF =
+                YoutubeTrendingGamingVideosLinkHandlerFactory.INSTANCE;
+        final ListLinkHandlerFactory trendingMoviesAndShowsLHF =
+                YoutubeTrendingMoviesAndShowsTrailersLinkHandlerFactory.INSTANCE;
+        final ListLinkHandlerFactory trendingMusicLHF =
+                YoutubeTrendingMusicLinkHandlerFactory.INSTANCE;
 
-        // add kiosks here e.g.:
         try {
-            list.addKioskEntry(new KioskList.KioskExtractorFactory() {
-                @Override
-                public KioskExtractor createNewKiosk(StreamingService streamingService,
-                                                     String url,
-                                                     String id)
-                        throws ExtractionException {
-                    return new YoutubeTrendingExtractor(YoutubeService.this,
-                            new YoutubeTrendingLinkHandlerFactory().fromUrl(url), id);
-                }
-            }, new YoutubeTrendingLinkHandlerFactory(), "Trending");
-            list.setDefaultKiosk("Trending");
-        } catch (Exception e) {
+            list.addKioskEntry(
+                    (streamingService, url, id) -> new YoutubeLiveExtractor(
+                            YoutubeService.this,
+                            runningLivesLHF.fromUrl(url),
+                            id),
+                    runningLivesLHF,
+                    YoutubeLiveLinkHandlerFactory.KIOSK_ID
+            );
+            list.addKioskEntry(
+                    (streamingService, url, id) -> new YoutubeTrendingPodcastsEpisodesExtractor(
+                            YoutubeService.this,
+                            trendingPodcastsEpisodesLHF.fromUrl(url),
+                            id),
+                    trendingPodcastsEpisodesLHF,
+                    YoutubeTrendingPodcastsEpisodesLinkHandlerFactory.KIOSK_ID
+            );
+            list.addKioskEntry(
+                    (streamingService, url, id) -> new YoutubeTrendingGamingVideosExtractor(
+                            YoutubeService.this,
+                            trendingGamingVideosLHF.fromUrl(url),
+                            id),
+                    trendingGamingVideosLHF,
+                    YoutubeTrendingGamingVideosLinkHandlerFactory.KIOSK_ID
+            );
+            list.addKioskEntry(
+                    (streamingService, url, id) ->
+                            new YoutubeTrendingMoviesAndShowsTrailersExtractor(
+                                    YoutubeService.this,
+                                    trendingMoviesAndShowsLHF.fromUrl(url),
+                                    id),
+                    trendingMoviesAndShowsLHF,
+                    YoutubeTrendingMoviesAndShowsTrailersLinkHandlerFactory.KIOSK_ID
+            );
+            list.addKioskEntry(
+                    (streamingService, url, id) -> new YoutubeTrendingMusicExtractor(
+                            YoutubeService.this,
+                            trendingMusicLHF.fromUrl(url),
+                            id),
+                    trendingMusicLHF,
+                    YoutubeTrendingMusicLinkHandlerFactory.KIOSK_ID
+            );
+            // Deprecated (i.e. removed from the interface of YouTube) since July 21, 2025
+            list.addKioskEntry(
+                    (streamingService, url, id) -> new YoutubeTrendingExtractor(
+                            YoutubeService.this,
+                            trendingLHF.fromUrl(url),
+                            id
+                    ),
+                    trendingLHF,
+                    YoutubeTrendingExtractor.KIOSK_ID
+            );
+            list.setDefaultKiosk(YoutubeLiveLinkHandlerFactory.KIOSK_ID);
+        } catch (final Exception e) {
             throw new ExtractionException(e);
         }
 
@@ -176,7 +253,7 @@ public class YoutubeService extends StreamingService {
     }
 
     @Override
-    public CommentsExtractor getCommentsExtractor(ListLinkHandler urlIdHandler)
+    public CommentsExtractor getCommentsExtractor(final ListLinkHandler urlIdHandler)
             throws ExtractionException {
         return new YoutubeCommentsExtractor(this, urlIdHandler);
     }
@@ -199,14 +276,14 @@ public class YoutubeService extends StreamingService {
 
     // https://www.youtube.com/picker_ajax?action_country_json=1
     private static final List<ContentCountry> SUPPORTED_COUNTRIES = ContentCountry.listFrom(
-            "DZ", "AR", "AU", "AT", "AZ", "BH", "BD", "BY", "BE", "BO", "BA", "BR", "BG", "CA", "CL",
-            "CO", "CR", "HR", "CY", "CZ", "DK", "DO", "EC", "EG", "SV", "EE", "FI", "FR", "GE", "DE",
-            "GH", "GR", "GT", "HN", "HK", "HU", "IS", "IN", "ID", "IQ", "IE", "IL", "IT", "JM", "JP",
-            "JO", "KZ", "KE", "KW", "LV", "LB", "LY", "LI", "LT", "LU", "MY", "MT", "MX", "ME", "MA",
-            "NP", "NL", "NZ", "NI", "NG", "MK", "NO", "OM", "PK", "PA", "PG", "PY", "PE", "PH", "PL",
-            "PT", "PR", "QA", "RO", "RU", "SA", "SN", "RS", "SG", "SK", "SI", "ZA", "KR", "ES", "LK",
-            "SE", "CH", "TW", "TZ", "TH", "TN", "TR", "UG", "UA", "AE", "GB", "US", "UY", "VE", "VN",
-            "YE", "ZW"
+            "DZ", "AR", "AU", "AT", "AZ", "BH", "BD", "BY", "BE", "BO", "BA", "BR", "BG", "KH",
+            "CA", "CL", "CO", "CR", "HR", "CY", "CZ", "DK", "DO", "EC", "EG", "SV", "EE", "FI",
+            "FR", "GE", "DE", "GH", "GR", "GT", "HN", "HK", "HU", "IS", "IN", "ID", "IQ", "IE",
+            "IL", "IT", "JM", "JP", "JO", "KZ", "KE", "KW", "LA", "LV", "LB", "LY", "LI", "LT",
+            "LU", "MY", "MT", "MX", "ME", "MA", "NP", "NL", "NZ", "NI", "NG", "MK", "NO", "OM",
+            "PK", "PA", "PG", "PY", "PE", "PH", "PL", "PT", "PR", "QA", "RO", "RU", "SA", "SN",
+            "RS", "SG", "SK", "SI", "ZA", "KR", "ES", "LK", "SE", "CH", "TW", "TZ", "TH", "TN",
+            "TR", "UG", "UA", "AE", "GB", "US", "UY", "VE", "VN", "YE", "ZW"
     );
 
     @Override

@@ -1,112 +1,128 @@
 package org.schabi.newpipe.extractor.comments;
 
-import org.schabi.newpipe.extractor.InfoItem;
 import org.schabi.newpipe.extractor.InfoItemsCollector;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class CommentsInfoItemsCollector extends InfoItemsCollector<CommentsInfoItem, CommentsInfoItemExtractor> {
+public final class CommentsInfoItemsCollector
+        extends InfoItemsCollector<CommentsInfoItem, CommentsInfoItemExtractor> {
 
-    public CommentsInfoItemsCollector(int serviceId) {
+    public CommentsInfoItemsCollector(final int serviceId) {
         super(serviceId);
     }
 
     @Override
-    public CommentsInfoItem extract(CommentsInfoItemExtractor extractor) throws ParsingException {
-
-        // important information
-        int serviceId = getServiceId();
-        String url = extractor.getUrl();
-        String name = extractor.getName();
-
-        CommentsInfoItem resultItem = new CommentsInfoItem(serviceId, url, name);
+    public CommentsInfoItem extract(final CommentsInfoItemExtractor extractor)
+            throws ParsingException {
+        final CommentsInfoItem resultItem = new CommentsInfoItem(
+                getServiceId(), extractor.getUrl(), extractor.getName());
 
         // optional information
         try {
             resultItem.setCommentId(extractor.getCommentId());
-        } catch (Exception e) {
+        } catch (final Exception e) {
             addError(e);
         }
         try {
             resultItem.setCommentText(extractor.getCommentText());
-        } catch (Exception e) {
+        } catch (final Exception e) {
             addError(e);
         }
         try {
             resultItem.setUploaderName(extractor.getUploaderName());
-        } catch (Exception e) {
+        } catch (final Exception e) {
             addError(e);
         }
         try {
-            resultItem.setUploaderAvatarUrl(extractor.getUploaderAvatarUrl());
-        } catch (Exception e) {
+            resultItem.setUploaderAvatars(extractor.getUploaderAvatars());
+        } catch (final Exception e) {
             addError(e);
         }
         try {
             resultItem.setUploaderUrl(extractor.getUploaderUrl());
-        } catch (Exception e) {
+        } catch (final Exception e) {
             addError(e);
         }
         try {
             resultItem.setTextualUploadDate(extractor.getTextualUploadDate());
-        } catch (Exception e) {
+        } catch (final Exception e) {
             addError(e);
         }
         try {
             resultItem.setUploadDate(extractor.getUploadDate());
-        } catch (Exception e) {
+        } catch (final Exception e) {
             addError(e);
         }
         try {
             resultItem.setLikeCount(extractor.getLikeCount());
-        } catch (Exception e) {
+        } catch (final Exception e) {
             addError(e);
         }
         try {
             resultItem.setTextualLikeCount(extractor.getTextualLikeCount());
-        } catch (Exception e) {
+        } catch (final Exception e) {
             addError(e);
         }
         try {
-            resultItem.setThumbnailUrl(extractor.getThumbnailUrl());
-        } catch (Exception e) {
+            resultItem.setThumbnails(extractor.getThumbnails());
+        } catch (final Exception e) {
             addError(e);
         }
 
         try {
             resultItem.setHeartedByUploader(extractor.isHeartedByUploader());
-        } catch (Exception e) {
+        } catch (final Exception e) {
             addError(e);
         }
 
         try {
             resultItem.setPinned(extractor.isPinned());
-        } catch (Exception e) {
+        } catch (final Exception e) {
             addError(e);
         }
 
         try {
             resultItem.setStreamPosition(extractor.getStreamPosition());
-        } catch (Exception e) {
+        } catch (final Exception e) {
+            addError(e);
+        }
+
+        try {
+            resultItem.setReplyCount(extractor.getReplyCount());
+        } catch (final Exception e) {
             addError(e);
         }
 
         try {
             resultItem.setReplies(extractor.getReplies());
-        } catch (Exception e) {
+        } catch (final Exception e) {
             addError(e);
         }
+
+        try {
+            resultItem.setChannelOwner(extractor.isChannelOwner());
+        } catch (final Exception e) {
+            addError(e);
+        }
+
+
+        try {
+            resultItem.setCreatorReply(extractor.hasCreatorReply());
+        } catch (final Exception e) {
+            addError(e);
+        }
+
 
         return resultItem;
     }
 
     @Override
-    public void commit(CommentsInfoItemExtractor extractor) {
+    public void commit(final CommentsInfoItemExtractor extractor) {
         try {
             addItem(extract(extractor));
-        } catch (Exception e) {
+        } catch (final Exception e) {
             addError(e);
         }
     }

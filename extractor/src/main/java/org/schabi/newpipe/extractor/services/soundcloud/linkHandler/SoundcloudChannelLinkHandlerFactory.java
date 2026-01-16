@@ -8,19 +8,22 @@ import org.schabi.newpipe.extractor.utils.Utils;
 
 import java.util.List;
 
-public class SoundcloudChannelLinkHandlerFactory extends ListLinkHandlerFactory {
-    private static final SoundcloudChannelLinkHandlerFactory instance =
-            new SoundcloudChannelLinkHandlerFactory();
-    private static final String URL_PATTERN ="^https?://(www\\.|m\\.)?soundcloud.com/[0-9a-z_-]+"
+public final class SoundcloudChannelLinkHandlerFactory extends ListLinkHandlerFactory {
+    private static final SoundcloudChannelLinkHandlerFactory INSTANCE
+            = new SoundcloudChannelLinkHandlerFactory();
+    private static final String URL_PATTERN = "^https?://(www\\.|m\\.)?soundcloud.com/[0-9a-z_-]+"
             + "(/((tracks|albums|sets|reposts|followers|following)/?)?)?([#?].*)?$";
 
+    private SoundcloudChannelLinkHandlerFactory() {
+    }
+
     public static SoundcloudChannelLinkHandlerFactory getInstance() {
-        return instance;
+        return INSTANCE;
     }
 
 
     @Override
-    public String getId(final String url) throws ParsingException {
+    public String getId(final String url) throws ParsingException, UnsupportedOperationException {
         Utils.checkUrl(URL_PATTERN, url);
 
         try {
@@ -33,7 +36,8 @@ public class SoundcloudChannelLinkHandlerFactory extends ListLinkHandlerFactory 
     @Override
     public String getUrl(final String id,
                          final List<String> contentFilter,
-                         final String sortFilter) throws ParsingException {
+                         final String sortFilter)
+            throws ParsingException, UnsupportedOperationException {
         try {
             return SoundcloudParsingHelper.resolveUrlWithEmbedPlayer(
                     "https://api.soundcloud.com/users/" + id);

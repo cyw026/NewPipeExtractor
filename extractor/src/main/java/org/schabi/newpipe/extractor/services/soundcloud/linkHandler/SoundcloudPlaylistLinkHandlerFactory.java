@@ -8,18 +8,21 @@ import org.schabi.newpipe.extractor.utils.Utils;
 
 import java.util.List;
 
-public class SoundcloudPlaylistLinkHandlerFactory extends ListLinkHandlerFactory {
-    private static final SoundcloudPlaylistLinkHandlerFactory instance =
+public final class SoundcloudPlaylistLinkHandlerFactory extends ListLinkHandlerFactory {
+    private static final SoundcloudPlaylistLinkHandlerFactory INSTANCE =
             new SoundcloudPlaylistLinkHandlerFactory();
     private static final String URL_PATTERN = "^https?://(www\\.|m\\.)?soundcloud.com/[0-9a-z_-]+"
             + "/sets/[0-9a-z_-]+/?([#?].*)?$";
 
+    private SoundcloudPlaylistLinkHandlerFactory() {
+    }
+
     public static SoundcloudPlaylistLinkHandlerFactory getInstance() {
-        return instance;
+        return INSTANCE;
     }
 
     @Override
-    public String getId(final String url) throws ParsingException {
+    public String getId(final String url) throws ParsingException, UnsupportedOperationException {
         Utils.checkUrl(URL_PATTERN, url);
 
         try {
@@ -34,7 +37,7 @@ public class SoundcloudPlaylistLinkHandlerFactory extends ListLinkHandlerFactory
     public String getUrl(final String id,
                          final List<String> contentFilter,
                          final String sortFilter)
-            throws ParsingException {
+            throws ParsingException, UnsupportedOperationException {
         try {
             return SoundcloudParsingHelper.resolveUrlWithEmbedPlayer(
                     "https://api.soundcloud.com/playlists/" + id);

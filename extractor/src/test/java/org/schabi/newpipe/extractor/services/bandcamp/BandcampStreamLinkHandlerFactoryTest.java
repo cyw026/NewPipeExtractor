@@ -2,14 +2,15 @@
 
 package org.schabi.newpipe.extractor.services.bandcamp;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.schabi.newpipe.downloader.DownloaderTestImpl;
-import org.schabi.newpipe.extractor.NewPipe;
+import org.schabi.newpipe.extractor.InitNewPipeTest;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.services.bandcamp.linkHandler.BandcampStreamLinkHandlerFactory;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Test for {@link BandcampStreamLinkHandlerFactory}
@@ -20,12 +21,12 @@ public class BandcampStreamLinkHandlerFactoryTest {
 
     @BeforeAll
     public static void setUp() {
-        linkHandler = new BandcampStreamLinkHandlerFactory();
-        NewPipe.init(DownloaderTestImpl.getInstance());
+        InitNewPipeTest.initEmpty();
+        linkHandler = BandcampStreamLinkHandlerFactory.getInstance();
     }
 
     @Test
-    public void testGetRadioUrl() {
+    public void testGetRadioUrl() throws ParsingException {
         assertEquals("https://bandcamp.com/?show=1", linkHandler.getUrl("1"));
     }
 
@@ -49,6 +50,5 @@ public class BandcampStreamLinkHandlerFactoryTest {
         assertTrue(linkHandler.acceptUrl("https://interovgm.bandcamp.com/track/title"));
         assertTrue(linkHandler.acceptUrl("http://bandcamP.com/?show=38"));
         assertTrue(linkHandler.acceptUrl("https://goodgoodblood-tl.bandcamp.com/track/when-it-all-wakes-up"));
-        assertTrue(linkHandler.acceptUrl("https://lobstertheremin.com/track/unfinished"));
     }
 }

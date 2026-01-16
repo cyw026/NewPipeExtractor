@@ -5,21 +5,21 @@ import org.schabi.newpipe.extractor.InfoItem;
 /*
  * Created by Christian Schabesberger on 11.02.17.
  *
- * Copyright (C) Christian Schabesberger 2017 <chris.schabesberger@mailbox.org>
- * ChannelInfoItem.java is part of NewPipe.
+ * Copyright (C) 2017 Christian Schabesberger <chris.schabesberger@mailbox.org>
+ * ChannelInfoItem.java is part of NewPipe Extractor.
  *
- * NewPipe is free software: you can redistribute it and/or modify
+ * NewPipe Extractor is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * NewPipe is distributed in the hope that it will be useful,
+ * NewPipe Extractor is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with NewPipe.  If not, see <http://www.gnu.org/licenses/>.
+ * along with NewPipe Extractor.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 public class ChannelInfoItem extends InfoItem {
@@ -29,7 +29,7 @@ public class ChannelInfoItem extends InfoItem {
     private long streamCount = -1;
     private boolean verified = false;
 
-    public ChannelInfoItem(int serviceId, String url, String name) {
+    public ChannelInfoItem(final int serviceId, final String url, final String name) {
         super(InfoType.CHANNEL, serviceId, url, name);
     }
 
@@ -37,7 +37,7 @@ public class ChannelInfoItem extends InfoItem {
         return description;
     }
 
-    public void setDescription(String description) {
+    public void setDescription(final String description) {
         this.description = description;
     }
 
@@ -45,23 +45,23 @@ public class ChannelInfoItem extends InfoItem {
         return subscriberCount;
     }
 
-    public void setSubscriberCount(long subscriber_count) {
-        this.subscriberCount = subscriber_count;
+    public void setSubscriberCount(final long subscriberCount) {
+        this.subscriberCount = subscriberCount;
     }
 
     public long getStreamCount() {
         return streamCount;
     }
 
-    public void setStreamCount(long stream_count) {
-        this.streamCount = stream_count;
+    public void setStreamCount(final long streamCount) {
+        this.streamCount = streamCount;
     }
 
     public boolean isVerified() {
         return verified;
     }
 
-    public void setVerified(boolean verified) {
+    public void setVerified(final boolean verified) {
         this.verified = verified;
     }
 }

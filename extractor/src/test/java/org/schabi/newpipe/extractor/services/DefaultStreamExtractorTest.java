@@ -5,8 +5,8 @@ import org.schabi.newpipe.extractor.ExtractorAsserts;
 import org.schabi.newpipe.extractor.InfoItemsCollector;
 import org.schabi.newpipe.extractor.MediaFormat;
 import org.schabi.newpipe.extractor.MetaInfo;
-import org.schabi.newpipe.extractor.localization.DateWrapper;
 import org.schabi.newpipe.extractor.stream.AudioStream;
+import org.schabi.newpipe.extractor.stream.ContentAvailability;
 import org.schabi.newpipe.extractor.stream.Description;
 import org.schabi.newpipe.extractor.stream.Frameset;
 import org.schabi.newpipe.extractor.stream.StreamExtractor;
@@ -16,6 +16,7 @@ import org.schabi.newpipe.extractor.stream.VideoStream;
 
 import javax.annotation.Nullable;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -29,11 +30,14 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.schabi.newpipe.extractor.ExtractorAsserts.assertGreaterOrEqual;
+import static org.schabi.newpipe.extractor.ExtractorAsserts.assertEmpty;
 import static org.schabi.newpipe.extractor.ExtractorAsserts.assertEqualsOrderIndependent;
+import static org.schabi.newpipe.extractor.ExtractorAsserts.assertGreaterOrEqual;
 import static org.schabi.newpipe.extractor.ExtractorAsserts.assertIsSecureUrl;
 import static org.schabi.newpipe.extractor.ExtractorAsserts.assertIsValidUrl;
+import static org.schabi.newpipe.extractor.services.DefaultTests.defaultTestImageCollection;
 import static org.schabi.newpipe.extractor.services.DefaultTests.defaultTestListOfItems;
+import static org.schabi.newpipe.extractor.stream.StreamExtractor.UNKNOWN_SUBSCRIBER_COUNT;
 
 /**
  * Test for {@link StreamExtractor}
@@ -45,6 +49,7 @@ public abstract class DefaultStreamExtractorTest extends DefaultExtractorTest<St
     public abstract String expectedUploaderName();
     public abstract String expectedUploaderUrl();
     public boolean expectedUploaderVerified() { return false; }
+    public long expectedUploaderSubscriberCountAtLeast() { return UNKNOWN_SUBSCRIBER_COUNT; }
     public String expectedSubChannelName() { return ""; } // default: there is no subchannel
     public String expectedSubChannelUrl() { return ""; } // default: there is no subchannel
     public boolean expectedDescriptionIsEmpty() { return false; } // default: description is not empty
@@ -73,6 +78,7 @@ public abstract class DefaultStreamExtractorTest extends DefaultExtractorTest<St
     public String expectedSupportInfo() { return ""; } // default: no support info available
     public int expectedStreamSegmentsCount() { return -1; } // return 0 or greater to test (default is -1 to ignore)
     public List<MetaInfo> expectedMetaInfo() throws MalformedURLException { return Collections.emptyList(); } // default: no metadata info available
+    public ContentAvailability expectedContentAvailability() { return ContentAvailability.UNKNOWN; } // default: unknown content availability
 
     @Test
     @Override
@@ -96,13 +102,23 @@ public abstract class DefaultStreamExtractorTest extends DefaultExtractorTest<St
 
     @Test
     @Override
-    public void testUploaderAvatarUrl() throws Exception {
-        assertIsSecureUrl(extractor().getUploaderAvatarUrl());
+    public void testUploaderAvatars() throws Exception {
+        defaultTestImageCollection(extractor().getUploaderAvatars());
     }
 
     @Test
     public void testUploaderVerified() throws Exception {
         assertEquals(expectedUploaderVerified(), extractor().isUploaderVerified());
+    }
+
+    @Test
+    @Override
+    public void testSubscriberCount() throws Exception {
+        if (expectedUploaderSubscriberCountAtLeast() == UNKNOWN_SUBSCRIBER_COUNT) {
+            assertEquals(UNKNOWN_SUBSCRIBER_COUNT, extractor().getUploaderSubscriberCount());
+        } else {
+            assertGreaterOrEqual(expectedUploaderSubscriberCountAtLeast(), extractor().getUploaderSubscriberCount());
+        }
     }
 
     @Test
@@ -125,20 +141,20 @@ public abstract class DefaultStreamExtractorTest extends DefaultExtractorTest<St
 
     @Test
     @Override
-    public void testSubChannelAvatarUrl() throws Exception {
+    public void testSubChannelAvatars() throws Exception {
         if (expectedSubChannelName().isEmpty() && expectedSubChannelUrl().isEmpty()) {
             // this stream has no subchannel
-            assertEquals("", extractor().getSubChannelAvatarUrl());
+            assertEmpty(extractor().getSubChannelAvatars());
         } else {
             // this stream has a subchannel
-            assertIsSecureUrl(extractor().getSubChannelAvatarUrl());
+            defaultTestImageCollection(extractor().getSubChannelAvatars());
         }
     }
 
     @Test
     @Override
-    public void testThumbnailUrl() throws Exception {
-        assertIsSecureUrl(extractor().getThumbnailUrl());
+    public void testThumbnails() throws Exception {
+        defaultTestImageCollection(extractor().getThumbnails());
     }
 
     @Test
@@ -179,18 +195,18 @@ public abstract class DefaultStreamExtractorTest extends DefaultExtractorTest<St
     @Test
     @Override
     public void testUploadDate() throws Exception {
-        final DateWrapper dateWrapper = extractor().getUploadDate();
+        final var dateWrapper = extractor().getUploadDate();
+        final var expectedDate = expectedUploadDate();
 
-        if (expectedUploadDate() == null) {
+        if (expectedDate == null) {
             assertNull(dateWrapper);
         } else {
             assertNotNull(dateWrapper);
 
-            final LocalDateTime expectedDateTime = LocalDateTime.parse(expectedUploadDate(),
+            final var expectedDateTime = LocalDateTime.parse(expectedDate,
                     DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"));
-            final LocalDateTime actualDateTime = dateWrapper.offsetDateTime().toLocalDateTime();
 
-            assertEquals(expectedDateTime, actualDateTime);
+            assertEquals(expectedDateTime, dateWrapper.getLocalDateTime(ZoneOffset.UTC));
         }
     }
 
@@ -259,13 +275,20 @@ public abstract class DefaultStreamExtractorTest extends DefaultExtractorTest<St
             assertFalse(videoStreams.isEmpty());
 
             for (final VideoStream stream : videoStreams) {
-                assertIsSecureUrl(stream.getUrl());
-                assertFalse(stream.getResolution().isEmpty());
-
-                final int formatId = stream.getFormatId();
-                // see MediaFormat: video stream formats range from 0 to 0x100
-                assertTrue(0 <= formatId && formatId < 0x100,
-                        "format id does not fit a video stream: " + formatId);
+                if (stream.isUrl()) {
+                    assertIsSecureUrl(stream.getContent());
+                }
+                final StreamType streamType = extractor().getStreamType();
+                // On some video streams, the resolution can be empty and the format be unknown,
+                // especially on livestreams (like streams with HLS master playlists)
+                if (streamType != StreamType.LIVE_STREAM
+                        && streamType != StreamType.AUDIO_LIVE_STREAM) {
+                    assertFalse(stream.getResolution().isEmpty());
+                    final int formatId = stream.getFormatId();
+                    // see MediaFormat: video stream formats range from 0 to 0x100
+                    assertTrue(0 <= formatId && formatId < 0x100,
+                            "Format id does not fit a video stream: " + formatId);
+                }
             }
         } else {
             assertTrue(videoStreams.isEmpty());
@@ -282,12 +305,17 @@ public abstract class DefaultStreamExtractorTest extends DefaultExtractorTest<St
             assertFalse(audioStreams.isEmpty());
 
             for (final AudioStream stream : audioStreams) {
-                assertIsSecureUrl(stream.getUrl());
+                if (stream.isUrl()) {
+                    assertIsSecureUrl(stream.getContent());
+                }
 
-                final int formatId = stream.getFormatId();
-                // see MediaFormat: video stream formats range from 0x100 to 0x1000
-                assertTrue(0x100 <= formatId && formatId < 0x1000,
-                        "format id does not fit an audio stream: " + formatId);
+                // The media format can be unknown on some audio streams
+                if (stream.getFormat() != null) {
+                    final int formatId = stream.getFormat().id;
+                    // see MediaFormat: audio stream formats range from 0x100 to 0x1000
+                    assertTrue(0x100 <= formatId && formatId < 0x1000,
+                            "Format id does not fit an audio stream: " + formatId);
+                }
             }
         } else {
             assertTrue(audioStreams.isEmpty());
@@ -304,12 +332,14 @@ public abstract class DefaultStreamExtractorTest extends DefaultExtractorTest<St
             assertFalse(subtitles.isEmpty());
 
             for (final SubtitlesStream stream : subtitles) {
-                assertIsSecureUrl(stream.getUrl());
+                if (stream.isUrl()) {
+                    assertIsSecureUrl(stream.getContent());
+                }
 
                 final int formatId = stream.getFormatId();
                 // see MediaFormat: video stream formats range from 0x1000 to 0x10000
                 assertTrue(0x1000 <= formatId && formatId < 0x10000,
-                        "format id does not fit a subtitles stream: " + formatId);
+                        "Format id does not fit a subtitles stream: " + formatId);
             }
         } else {
             assertTrue(subtitles.isEmpty());
@@ -332,7 +362,8 @@ public abstract class DefaultStreamExtractorTest extends DefaultExtractorTest<St
             assertTrue(dashMpdUrl.isEmpty());
         } else {
             assertIsSecureUrl(dashMpdUrl);
-            ExtractorAsserts.assertContains(expectedDashMpdUrlContains(), extractor().getDashMpdUrl());
+            ExtractorAsserts.assertContains(expectedDashMpdUrlContains(),
+                    extractor().getDashMpdUrl());
         }
     }
 
@@ -400,6 +431,7 @@ public abstract class DefaultStreamExtractorTest extends DefaultExtractorTest<St
     }
 
     @Test
+    @Override
     public void testStreamSegmentsCount() throws Exception {
         if (expectedStreamSegmentsCount() >= 0) {
             assertEquals(expectedStreamSegmentsCount(), extractor().getStreamSegments().size());
@@ -410,6 +442,7 @@ public abstract class DefaultStreamExtractorTest extends DefaultExtractorTest<St
      * @see DefaultSearchExtractorTest#testMetaInfo()
      */
     @Test
+    @Override
     public void testMetaInfo() throws Exception {
         final List<MetaInfo> metaInfoList = extractor().getMetaInfo();
         final List<MetaInfo> expectedMetaInfoList = expectedMetaInfo();
@@ -434,6 +467,11 @@ public abstract class DefaultStreamExtractorTest extends DefaultExtractorTest<St
                 assertTrue(urls.contains(expectedUrl));
             }
         }
+    }
 
+    @Test
+    @Override
+    public void testContentAvailability() throws Exception {
+        assertEquals(expectedContentAvailability(), extractor().getContentAvailability());
     }
 }

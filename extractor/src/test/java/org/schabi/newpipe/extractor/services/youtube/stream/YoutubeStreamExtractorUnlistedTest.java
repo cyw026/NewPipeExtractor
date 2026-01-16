@@ -1,41 +1,29 @@
 package org.schabi.newpipe.extractor.services.youtube.stream;
 
-import org.junit.jupiter.api.BeforeAll;
-import org.schabi.newpipe.downloader.DownloaderFactory;
-import org.schabi.newpipe.extractor.NewPipe;
+import static org.schabi.newpipe.extractor.ServiceList.YouTube;
+import static org.schabi.newpipe.extractor.stream.StreamExtractor.Privacy.UNLISTED;
+
 import org.schabi.newpipe.extractor.StreamingService;
 import org.schabi.newpipe.extractor.services.DefaultStreamExtractorTest;
-import org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper;
-import org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeStreamExtractor;
+import org.schabi.newpipe.extractor.services.youtube.InitYoutubeTest;
 import org.schabi.newpipe.extractor.stream.StreamExtractor;
 import org.schabi.newpipe.extractor.stream.StreamType;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Random;
 
 import javax.annotation.Nullable;
 
-import static org.schabi.newpipe.extractor.ServiceList.YouTube;
-import static org.schabi.newpipe.extractor.stream.StreamExtractor.Privacy.UNLISTED;
-
-public class YoutubeStreamExtractorUnlistedTest extends DefaultStreamExtractorTest {
-    private static final String RESOURCE_PATH = DownloaderFactory.RESOURCE_PATH + "services/youtube/extractor/stream/";
+public class YoutubeStreamExtractorUnlistedTest extends DefaultStreamExtractorTest
+    implements InitYoutubeTest {
     static final String ID = "udsB8KnIJTg";
     static final String URL = YoutubeStreamExtractorDefaultTest.BASE_URL + ID;
-    private static StreamExtractor extractor;
 
-    @BeforeAll
-    public static void setUp() throws Exception {
-        YoutubeParsingHelper.resetClientVersionAndKey();
-        YoutubeParsingHelper.setNumberGenerator(new Random(1));
-        YoutubeStreamExtractor.resetDeobfuscationCode();
-        NewPipe.init(new DownloaderFactory().getDownloader(RESOURCE_PATH + "unlisted"));
-        extractor = YouTube.getStreamExtractor(URL);
-        extractor.fetchPage();
+    @Override
+    protected StreamExtractor createExtractor() throws Exception {
+        return YouTube.getStreamExtractor(URL);
     }
 
-    @Override public StreamExtractor extractor() { return extractor; }
     @Override public StreamingService expectedService() { return YouTube; }
     @Override public String expectedName() { return "Praise the Casual: Ein Neuling trifft Dark Souls - Folge 5"; }
     @Override public String expectedId() { return ID; }
@@ -45,14 +33,15 @@ public class YoutubeStreamExtractorUnlistedTest extends DefaultStreamExtractorTe
     @Override public StreamType expectedStreamType() { return StreamType.VIDEO_STREAM; }
     @Override public String expectedUploaderName() { return "Hooked"; }
     @Override public String expectedUploaderUrl() { return "https://www.youtube.com/channel/UCPysfiuOv4VKBeXFFPhKXyw"; }
+    @Override public long expectedUploaderSubscriberCountAtLeast() { return 24_300; }
     @Override public List<String> expectedDescriptionContains() {
         return Arrays.asList("https://www.youtube.com/user/Roccowschiptune",
                 "https://www.facebook.com/HookedMagazinDE");
     }
     @Override public long expectedLength() { return 2488; }
     @Override public long expectedViewCountAtLeast() { return 1500; }
-    @Nullable @Override public String expectedUploadDate() { return "2017-09-22 00:00:00.000"; }
-    @Nullable @Override public String expectedTextualUploadDate() { return "2017-09-22"; }
+    @Nullable @Override public String expectedUploadDate() { return "2017-09-22 12:15:21.000"; }
+    @Nullable @Override public String expectedTextualUploadDate() { return "2017-09-22T05:15:21-07:00"; }
     @Override public long expectedLikeCountAtLeast() { return 110; }
     @Override public long expectedDislikeCountAtLeast() { return -1; }
     @Override public StreamExtractor.Privacy expectedPrivacy() { return UNLISTED; }

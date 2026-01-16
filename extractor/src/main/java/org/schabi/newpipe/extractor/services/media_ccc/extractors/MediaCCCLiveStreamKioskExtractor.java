@@ -1,12 +1,17 @@
 package org.schabi.newpipe.extractor.services.media_ccc.extractors;
 
 import com.grack.nanojson.JsonObject;
+import org.schabi.newpipe.extractor.Image;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.localization.DateWrapper;
 import org.schabi.newpipe.extractor.stream.StreamInfoItemExtractor;
 import org.schabi.newpipe.extractor.stream.StreamType;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.List;
+
+import static org.schabi.newpipe.extractor.services.media_ccc.extractors.MediaCCCParsingHelper.getThumbnailsFromLiveStreamItem;
 
 public class MediaCCCLiveStreamKioskExtractor implements StreamInfoItemExtractor {
 
@@ -14,7 +19,8 @@ public class MediaCCCLiveStreamKioskExtractor implements StreamInfoItemExtractor
     private final String group;
     private final JsonObject roomInfo;
 
-    public MediaCCCLiveStreamKioskExtractor(final JsonObject conferenceInfo, final String group,
+    public MediaCCCLiveStreamKioskExtractor(final JsonObject conferenceInfo,
+                                            final String group,
                                             final JsonObject roomInfo) {
         this.conferenceInfo = conferenceInfo;
         this.group = group;
@@ -31,15 +37,16 @@ public class MediaCCCLiveStreamKioskExtractor implements StreamInfoItemExtractor
         return roomInfo.getString("link");
     }
 
+    @Nonnull
     @Override
-    public String getThumbnailUrl() throws ParsingException {
-        return roomInfo.getString("thumb");
+    public List<Image> getThumbnails() throws ParsingException {
+        return getThumbnailsFromLiveStreamItem(roomInfo);
     }
 
     @Override
     public StreamType getStreamType() throws ParsingException {
         boolean isVideo = false;
-        for (Object stream : roomInfo.getArray("streams")) {
+        for (final Object stream : roomInfo.getArray("streams")) {
             if ("video".equals(((JsonObject) stream).getString("type"))) {
                 isVideo = true;
                 break;
@@ -65,18 +72,13 @@ public class MediaCCCLiveStreamKioskExtractor implements StreamInfoItemExtractor
 
     @Override
     public String getUploaderName() throws ParsingException {
-        return conferenceInfo.getString("conference") + " - " + group + " - " + roomInfo.getString("display");
+        return conferenceInfo.getString("conference") + " - " + group
+                + " - " + roomInfo.getString("display");
     }
 
     @Override
     public String getUploaderUrl() throws ParsingException {
         return "https://media.ccc.de/c/" + conferenceInfo.getString("slug");
-    }
-
-    @Nullable
-    @Override
-    public String getUploaderAvatarUrl() {
-        return null;
     }
 
     @Override

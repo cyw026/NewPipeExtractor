@@ -1,22 +1,30 @@
 package org.schabi.newpipe.extractor.services.bandcamp.extractors;
 
-import org.jsoup.nodes.Element;
+import static org.schabi.newpipe.extractor.services.bandcamp.extractors.BandcampExtractorHelper.getImagesFromImageId;
+
+import com.grack.nanojson.JsonObject;
+
+import org.schabi.newpipe.extractor.Image;
 import org.schabi.newpipe.extractor.comments.CommentsInfoItemExtractor;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
+import org.schabi.newpipe.extractor.stream.Description;
+
+import javax.annotation.Nonnull;
+import java.util.List;
 
 public class BandcampCommentsInfoItemExtractor implements CommentsInfoItemExtractor {
 
-    private final Element writing;
+    private final JsonObject review;
     private final String url;
 
-    public BandcampCommentsInfoItemExtractor(Element writing, String url) {
-        this.writing = writing;
+    public BandcampCommentsInfoItemExtractor(final JsonObject review, final String url) {
+        this.review = review;
         this.url = url;
     }
 
     @Override
     public String getName() throws ParsingException {
-        return writing.getElementsByClass("text").first().ownText();
+        return getCommentText().getContent();
     }
 
     @Override
@@ -24,23 +32,26 @@ public class BandcampCommentsInfoItemExtractor implements CommentsInfoItemExtrac
         return url;
     }
 
+    @Nonnull
     @Override
-    public String getThumbnailUrl() throws ParsingException {
-        return writing.getElementsByClass("thumb").attr("src");
+    public List<Image> getThumbnails() throws ParsingException {
+        return getUploaderAvatars();
     }
 
+    @Nonnull
     @Override
-    public String getCommentText() {
-        return writing.getElementsByClass("text").first().ownText();
+    public Description getCommentText() throws ParsingException {
+        return new Description(review.getString("why"), Description.PLAIN_TEXT);
     }
 
     @Override
     public String getUploaderName() throws ParsingException {
-        return writing.getElementsByClass("name").first().text();
+        return review.getString("name");
     }
 
+    @Nonnull
     @Override
-    public String getUploaderAvatarUrl() {
-        return writing.getElementsByClass("thumb").attr("src");
+    public List<Image> getUploaderAvatars() {
+        return getImagesFromImageId(review.getLong("image_id"), false);
     }
 }

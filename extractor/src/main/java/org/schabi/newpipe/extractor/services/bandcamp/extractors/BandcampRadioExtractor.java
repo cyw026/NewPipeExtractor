@@ -24,17 +24,19 @@ import static org.schabi.newpipe.extractor.services.bandcamp.extractors.Bandcamp
 public class BandcampRadioExtractor extends KioskExtractor<StreamInfoItem> {
 
     public static final String KIOSK_RADIO = "Radio";
-    public static final String RADIO_API_URL = BASE_API_URL + "/bcweekly/1/list";
+    public static final String RADIO_API_URL = BASE_API_URL + "/bcweekly/3/list";
 
     private JsonObject json = null;
 
-    public BandcampRadioExtractor(final StreamingService streamingService, final ListLinkHandler linkHandler,
+    public BandcampRadioExtractor(final StreamingService streamingService,
+                                  final ListLinkHandler linkHandler,
                                   final String kioskId) {
         super(streamingService, linkHandler, kioskId);
     }
 
     @Override
-    public void onFetchPage(@Nonnull final Downloader downloader) throws IOException, ExtractionException {
+    public void onFetchPage(@Nonnull final Downloader downloader)
+            throws IOException, ExtractionException {
         try {
             json = JsonParser.object().from(
                     getDownloader().get(RADIO_API_URL).responseBody());

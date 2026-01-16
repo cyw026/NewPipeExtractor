@@ -1,17 +1,19 @@
 package org.schabi.newpipe.extractor.services.youtube.linkHandler;
 
+import static org.schabi.newpipe.extractor.utils.Utils.encodeUrlUtf8;
+import static org.schabi.newpipe.extractor.utils.Utils.isNullOrEmpty;
+
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.linkhandler.SearchQueryHandlerFactory;
 
-import javax.annotation.Nonnull;
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
 import java.util.List;
 
-import static org.schabi.newpipe.extractor.utils.Utils.UTF_8;
-import static org.schabi.newpipe.extractor.utils.Utils.isNullOrEmpty;
+import javax.annotation.Nonnull;
 
-public class YoutubeSearchQueryHandlerFactory extends SearchQueryHandlerFactory {
+public final class YoutubeSearchQueryHandlerFactory extends SearchQueryHandlerFactory {
+
+    private static final YoutubeSearchQueryHandlerFactory INSTANCE =
+            new YoutubeSearchQueryHandlerFactory();
 
     public static final String ALL = "all";
     public static final String VIDEOS = "videos";
@@ -29,41 +31,30 @@ public class YoutubeSearchQueryHandlerFactory extends SearchQueryHandlerFactory 
 
     @Nonnull
     public static YoutubeSearchQueryHandlerFactory getInstance() {
-        return new YoutubeSearchQueryHandlerFactory();
+        return INSTANCE;
     }
 
     @Override
     public String getUrl(final String searchString,
                          @Nonnull final List<String> contentFilters,
-                         final String sortFilter) throws ParsingException {
-        try {
-            if (!contentFilters.isEmpty()) {
-                final String contentFilter = contentFilters.get(0);
-                switch (contentFilter) {
-                    case ALL:
-                    default:
-                        break;
-                    case VIDEOS:
-                        return SEARCH_URL + URLEncoder.encode(searchString, UTF_8)
-                                + "&sp=EgIQAQ%253D%253D";
-                    case CHANNELS:
-                        return SEARCH_URL + URLEncoder.encode(searchString, UTF_8)
-                                + "&sp=EgIQAg%253D%253D";
-                    case PLAYLISTS:
-                        return SEARCH_URL + URLEncoder.encode(searchString, UTF_8)
-                                + "&sp=EgIQAw%253D%253D";
-                    case MUSIC_SONGS:
-                    case MUSIC_VIDEOS:
-                    case MUSIC_ALBUMS:
-                    case MUSIC_PLAYLISTS:
-                    case MUSIC_ARTISTS:
-                        return MUSIC_SEARCH_URL + URLEncoder.encode(searchString, UTF_8);
-                }
-            }
-
-            return SEARCH_URL + URLEncoder.encode(searchString, UTF_8);
-        } catch (final UnsupportedEncodingException e) {
-            throw new ParsingException("Could not encode query", e);
+                         final String sortFilter)
+            throws ParsingException, UnsupportedOperationException {
+        final String contentFilter = !contentFilters.isEmpty() ? contentFilters.get(0) : "";
+        switch (contentFilter) {
+            case VIDEOS:
+                return SEARCH_URL + encodeUrlUtf8(searchString) + "&sp=EgIQAfABAQ%253D%253D";
+            case CHANNELS:
+                return SEARCH_URL + encodeUrlUtf8(searchString) + "&sp=EgIQAvABAQ%253D%253D";
+            case PLAYLISTS:
+                return SEARCH_URL + encodeUrlUtf8(searchString) + "&sp=EgIQA_ABAQ%253D%253D";
+            case MUSIC_SONGS:
+            case MUSIC_VIDEOS:
+            case MUSIC_ALBUMS:
+            case MUSIC_PLAYLISTS:
+            case MUSIC_ARTISTS:
+                return MUSIC_SEARCH_URL + encodeUrlUtf8(searchString);
+            default:
+                return SEARCH_URL + encodeUrlUtf8(searchString) + "&sp=8AEB";
         }
     }
 
@@ -84,22 +75,25 @@ public class YoutubeSearchQueryHandlerFactory extends SearchQueryHandlerFactory 
 
     @Nonnull
     public static String getSearchParameter(final String contentFilter) {
-        if (isNullOrEmpty(contentFilter)) return "";
+        if (isNullOrEmpty(contentFilter)) {
+            return "8AEB";
+        }
+
         switch (contentFilter) {
                 case VIDEOS:
-                    return "EgIQAQ%3D%3D";
+                    return "EgIQAfABAQ%3D%3D";
                 case CHANNELS:
-                    return "EgIQAg%3D%3D";
+                    return "EgIQAvABAQ%3D%3D";
                 case PLAYLISTS:
-                    return "EgIQAw%3D%3D";
-                case ALL:
+                    return "EgIQA_ABAQ%3D%3D";
                 case MUSIC_SONGS:
                 case MUSIC_VIDEOS:
                 case MUSIC_ALBUMS:
                 case MUSIC_PLAYLISTS:
                 case MUSIC_ARTISTS:
-                default:
                     return "";
+                default:
+                    return "8AEB";
         }
     }
 }

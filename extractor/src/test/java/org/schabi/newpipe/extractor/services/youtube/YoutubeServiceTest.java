@@ -3,37 +3,41 @@ package org.schabi.newpipe.extractor.services.youtube;
 /*
  * Created by Christian Schabesberger on 29.12.15.
  *
- * Copyright (C) Christian Schabesberger 2015 <chris.schabesberger@mailbox.org>
- * YoutubeSearchExtractorStreamTest.java is part of NewPipe.
+ * Copyright (C) 2015 Christian Schabesberger <chris.schabesberger@mailbox.org>
+ * YoutubeSearchExtractorStreamTest.java is part of NewPipe Extractor.
  *
- * NewPipe is free software: you can redistribute it and/or modify
+ * NewPipe Extractor is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * NewPipe is distributed in the hope that it will be useful,
+ * NewPipe Extractor is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with NewPipe.  If not, see <http://www.gnu.org/licenses/>.
+ * along with NewPipe Extractor.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.schabi.newpipe.extractor.ServiceList.YouTube;
+
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.schabi.newpipe.downloader.DownloaderTestImpl;
+import org.schabi.newpipe.extractor.InitNewPipeTest;
 import org.schabi.newpipe.extractor.NewPipe;
 import org.schabi.newpipe.extractor.StreamingService;
+import org.schabi.newpipe.extractor.downloader.Downloader;
+import org.schabi.newpipe.extractor.downloader.Request;
+import org.schabi.newpipe.extractor.downloader.Response;
 import org.schabi.newpipe.extractor.kiosk.KioskList;
 import org.schabi.newpipe.extractor.playlist.PlaylistExtractor;
 import org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeMixPlaylistExtractor;
 import org.schabi.newpipe.extractor.services.youtube.extractors.YoutubePlaylistExtractor;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.schabi.newpipe.extractor.ServiceList.YouTube;
 
 /**
  * Test for {@link YoutubeService}
@@ -44,7 +48,16 @@ public class YoutubeServiceTest {
 
     @BeforeAll
     public static void setUp() throws Exception {
-        NewPipe.init(DownloaderTestImpl.getInstance());
+        InitNewPipeTest.initEmpty();
+        // Init with dummy as
+        // * a downloader is required otherwise a NPE is thrown during extract initialization
+        // * nothing will be transmitted
+        NewPipe.init(new Downloader() {
+            @Override
+            public Response execute(@NotNull final Request request) {
+                throw new UnsupportedOperationException("No communication expected");
+            }
+        });
         service = YouTube;
         kioskList = service.getKioskList();
     }
@@ -56,7 +69,7 @@ public class YoutubeServiceTest {
 
     @Test
     void testGetDefaultKiosk() throws Exception {
-        assertEquals(kioskList.getDefaultKioskExtractor(null).getId(), "Trending");
+        assertEquals("live", kioskList.getDefaultKioskExtractor(null).getId());
     }
 
 
@@ -64,7 +77,7 @@ public class YoutubeServiceTest {
     void getPlayListExtractorIsNormalPlaylist() throws Exception {
         final PlaylistExtractor extractor = service.getPlaylistExtractor(
             "https://www.youtube.com/watch?v=JhqtYOnNrTs&list=PL-EkZZikQIQVqk9rBWzEo5b-2GeozElS");
-        assertTrue(extractor instanceof YoutubePlaylistExtractor);
+        assertInstanceOf(YoutubePlaylistExtractor.class, extractor);
     }
 
     @Test
@@ -72,16 +85,16 @@ public class YoutubeServiceTest {
         final String videoId = "_AzeUSL9lZc";
         PlaylistExtractor extractor = YouTube.getPlaylistExtractor(
             "https://www.youtube.com/watch?v=" + videoId + "&list=RD" + videoId);
-        assertTrue(extractor instanceof YoutubeMixPlaylistExtractor);
+        assertInstanceOf(YoutubeMixPlaylistExtractor.class, extractor);
 
         extractor = YouTube.getPlaylistExtractor(
             "https://www.youtube.com/watch?v=" + videoId + "&list=RDMM" + videoId);
-        assertTrue(extractor instanceof YoutubeMixPlaylistExtractor);
+        assertInstanceOf(YoutubeMixPlaylistExtractor.class, extractor);
 
         final String mixVideoId = "qHtzO49SDmk";
 
         extractor = YouTube.getPlaylistExtractor(
             "https://www.youtube.com/watch?v=" + mixVideoId + "&list=RD" + videoId);
-        assertTrue(extractor instanceof YoutubeMixPlaylistExtractor);
+        assertInstanceOf(YoutubeMixPlaylistExtractor.class, extractor);
     }
 }

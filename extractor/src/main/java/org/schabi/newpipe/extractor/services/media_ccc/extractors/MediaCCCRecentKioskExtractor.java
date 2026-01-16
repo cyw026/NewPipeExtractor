@@ -1,15 +1,22 @@
 package org.schabi.newpipe.extractor.services.media_ccc.extractors;
 
 import com.grack.nanojson.JsonObject;
+
+import org.schabi.newpipe.extractor.Image;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.localization.DateWrapper;
 import org.schabi.newpipe.extractor.services.media_ccc.linkHandler.MediaCCCConferenceLinkHandlerFactory;
 import org.schabi.newpipe.extractor.stream.StreamInfoItemExtractor;
 import org.schabi.newpipe.extractor.stream.StreamType;
 
-import javax.annotation.Nullable;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+import static org.schabi.newpipe.extractor.services.media_ccc.extractors.MediaCCCParsingHelper.getImageListFromLogoImageUrl;
 
 public class MediaCCCRecentKioskExtractor implements StreamInfoItemExtractor {
 
@@ -29,9 +36,10 @@ public class MediaCCCRecentKioskExtractor implements StreamInfoItemExtractor {
         return event.getString("frontend_link");
     }
 
+    @Nonnull
     @Override
-    public String getThumbnailUrl() throws ParsingException {
-        return event.getString("thumb_url");
+    public List<Image> getThumbnails() throws ParsingException {
+        return getImageListFromLogoImageUrl(event.getString("poster_url"));
     }
 
     @Override
@@ -45,9 +53,9 @@ public class MediaCCCRecentKioskExtractor implements StreamInfoItemExtractor {
     }
 
     @Override
-    public long getDuration() throws ParsingException {
-        // duration and length have the same value
-        // see https://github.com/voc/voctoweb/blob/master/app/views/public/shared/_event.json.jbuilder
+    public long getDuration() {
+        // duration and length have the same value, see
+        // https://github.com/voc/voctoweb/blob/master/app/views/public/shared/_event.json.jbuilder
         return event.getInt("duration");
     }
 
@@ -63,15 +71,9 @@ public class MediaCCCRecentKioskExtractor implements StreamInfoItemExtractor {
 
     @Override
     public String getUploaderUrl() throws ParsingException {
-        return new MediaCCCConferenceLinkHandlerFactory()
+        return MediaCCCConferenceLinkHandlerFactory.getInstance()
                 .fromUrl(event.getString("conference_url")) // API URL
                 .getUrl(); // web URL
-    }
-
-    @Nullable
-    @Override
-    public String getUploaderAvatarUrl() {
-        return null;
     }
 
     @Override
@@ -90,6 +92,6 @@ public class MediaCCCRecentKioskExtractor implements StreamInfoItemExtractor {
     public DateWrapper getUploadDate() throws ParsingException {
         final ZonedDateTime zonedDateTime = ZonedDateTime.parse(event.getString("date"),
                 DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSzzzz"));
-        return new DateWrapper(zonedDateTime.toOffsetDateTime(), false);
+        return new DateWrapper(zonedDateTime.toInstant());
     }
 }

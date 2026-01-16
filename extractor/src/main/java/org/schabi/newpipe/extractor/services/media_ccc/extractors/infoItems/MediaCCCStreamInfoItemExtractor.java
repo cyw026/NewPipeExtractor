@@ -1,16 +1,20 @@
 package org.schabi.newpipe.extractor.services.media_ccc.extractors.infoItems;
 
 import com.grack.nanojson.JsonObject;
+import org.schabi.newpipe.extractor.Image;
 import org.schabi.newpipe.extractor.exceptions.ParsingException;
 import org.schabi.newpipe.extractor.localization.DateWrapper;
-import org.schabi.newpipe.extractor.services.media_ccc.extractors.MediaCCCParsingHelper;
 import org.schabi.newpipe.extractor.stream.StreamInfoItemExtractor;
 import org.schabi.newpipe.extractor.stream.StreamType;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.List;
+
+import static org.schabi.newpipe.extractor.services.media_ccc.extractors.MediaCCCParsingHelper.getThumbnailsFromStreamItem;
 
 public class MediaCCCStreamInfoItemExtractor implements StreamInfoItemExtractor {
-    private JsonObject event;
+    private final JsonObject event;
 
     public MediaCCCStreamInfoItemExtractor(final JsonObject event) {
         this.event = event;
@@ -46,12 +50,6 @@ public class MediaCCCStreamInfoItemExtractor implements StreamInfoItemExtractor 
         return event.getString("conference_url");
     }
 
-    @Nullable
-    @Override
-    public String getUploaderAvatarUrl() {
-        return null;
-    }
-
     @Override
     public boolean isUploaderVerified() throws ParsingException {
         return false;
@@ -66,11 +64,8 @@ public class MediaCCCStreamInfoItemExtractor implements StreamInfoItemExtractor 
     @Nullable
     @Override
     public DateWrapper getUploadDate() throws ParsingException {
-        final String date = getTextualUploadDate();
-        if (date == null) {
-            return null; // event is in the future...
-        }
-        return new DateWrapper(MediaCCCParsingHelper.parseDateFrom(date));
+        // if null, event is in the future...
+        return DateWrapper.fromOffsetDateTime(getTextualUploadDate());
     }
 
     @Override
@@ -84,8 +79,9 @@ public class MediaCCCStreamInfoItemExtractor implements StreamInfoItemExtractor 
                 + event.getString("guid");
     }
 
+    @Nonnull
     @Override
-    public String getThumbnailUrl() {
-        return event.getString("thumb_url");
+    public List<Image> getThumbnails() {
+        return getThumbnailsFromStreamItem(event);
     }
 }
