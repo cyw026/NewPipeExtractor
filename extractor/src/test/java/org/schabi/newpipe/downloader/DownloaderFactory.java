@@ -2,20 +2,68 @@ package org.schabi.newpipe.downloader;
 
 import org.schabi.newpipe.extractor.downloader.Downloader;
 
-import java.io.IOException;
+import java.util.Locale;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class DownloaderFactory {
 
-    public static final String RESOURCE_PATH = "src/test/resources/org/schabi/newpipe/extractor/";
-
     private static final DownloaderType DEFAULT_DOWNLOADER = DownloaderType.REAL;
 
-    public static DownloaderType getDownloaderType() {
+    private static DownloaderType cachedDownloaderType;
+
+    private static DownloaderType getDownloaderType() {
+        if (cachedDownloaderType == null) {
+            cachedDownloaderType = determineDownloaderType();
+        }
+
+        return cachedDownloaderType;
+    }
+
+    private static DownloaderType determineDownloaderType() {
+        String propValue = System.getProperty("downloader");
+        if (propValue == null) {
+            return DEFAULT_DOWNLOADER;
+        }
+        propValue = propValue.toUpperCase();
+        // Use shortcut because RECORDING is quite long
+        if (propValue.equals("REC")) {
+            return DownloaderType.RECORDING;
+        }
         try {
-            return DownloaderType.valueOf(System.getProperty("downloader"));
+            return DownloaderType.valueOf(propValue);
         } catch (final Exception e) {
             return DEFAULT_DOWNLOADER;
         }
+    }
+
+    public static Downloader getDownloader(final Class<?> clazz) {
+        return getDownloader(getMockPath(clazz, null));
+    }
+
+    public static Downloader getDownloader(final Class<?> clazz,
+                                           @Nullable final String specificUseCase) {
+        return getDownloader(getMockPath(clazz, specificUseCase));
+    }
+
+    /**
+     * Always returns a path without a trailing '/', so that it can be used both as a folder name
+     * and as a filename. The {@link MockDownloader} will use it as a folder name, but other tests
+     * can use it as a filename, if only one custom mock file is needed for that test.
+     */
+    public static String getMockPath(final Class<?> clazz,
+                                     @Nullable final String specificUseCase) {
+        String baseName = clazz.getName();
+        if (specificUseCase != null) {
+            baseName += "." + specificUseCase;
+        }
+        return "src/test/resources/mocks/v1/"
+                + baseName
+                .toLowerCase(Locale.ENGLISH)
+                .replace('$', '.')
+                .replace("test", "")
+                .replace('.', '/');
     }
 
     /**
@@ -34,9 +82,8 @@ public class DownloaderFactory {
      * </p>
      *
      * @param path The path to the folder where mocks are saved/retrieved.
-     *             Preferably starting with {@link DownloaderFactory#RESOURCE_PATH}
      */
-    public static Downloader getDownloader(final String path) {
+    protected static Downloader getDownloader(final String path) {
         final DownloaderType type = getDownloaderType();
         switch (type) {
             case REAL:
