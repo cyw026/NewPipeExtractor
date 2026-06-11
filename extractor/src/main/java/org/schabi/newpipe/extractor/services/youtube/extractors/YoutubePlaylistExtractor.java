@@ -176,6 +176,9 @@ public class YoutubePlaylistExtractor extends PlaylistExtractor {
 
     @Nonnull
     private JsonObject getPlaylistHeader() {
+        if (browseMetadataResponse == null) {
+            return new JsonObject();
+        }
         if (playlistHeader == null) {
             playlistHeader = browseMetadataResponse.getObject(HEADER)
                     .getObject("playlistHeaderRenderer");
@@ -185,7 +188,7 @@ public class YoutubePlaylistExtractor extends PlaylistExtractor {
     }
 
     private boolean isCoursePlaylist() {
-        if (isCoursePlaylist == null && isNewPlaylistInterface) {
+        if (isCoursePlaylist == null) {
             isCoursePlaylist = getPlaylistHeader().getObject("onDescriptionTap")
                     .getObject(COMMAND_EXECUTOR_COMMAND)
                     .getArray("commands")
