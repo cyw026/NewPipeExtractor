@@ -185,7 +185,7 @@ public class YoutubePlaylistExtractor extends PlaylistExtractor {
     }
 
     private boolean isCoursePlaylist() {
-        if (isCoursePlaylist == null) {
+        if (isCoursePlaylist == null && isNewPlaylistInterface) {
             isCoursePlaylist = getPlaylistHeader().getObject("onDescriptionTap")
                     .getObject(COMMAND_EXECUTOR_COMMAND)
                     .getArray("commands")
