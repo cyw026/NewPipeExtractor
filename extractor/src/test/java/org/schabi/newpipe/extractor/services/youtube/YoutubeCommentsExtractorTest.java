@@ -100,7 +100,7 @@ public class YoutubeCommentsExtractorTest {
                 assertFalse(Utils.isBlank(c.getUploaderName()));
                 YoutubeTestsUtils.testImages(c.getUploaderAvatars());
                 assertFalse(Utils.isBlank(c.getCommentId()));
-                assertFalse(Utils.isBlank(c.getCommentText().getContent()));
+                assertFalse(Utils.isBlank(c.getCommentText().content()));
                 assertFalse(Utils.isBlank(c.getName()));
                 assertFalse(Utils.isBlank(c.getTextualUploadDate()));
                 assertNotNull(c.getUploadDate());
@@ -116,7 +116,7 @@ public class YoutubeCommentsExtractorTest {
 
         private boolean findInComments(final List<CommentsInfoItem> comments, final String comment) {
             for (final CommentsInfoItem c : comments) {
-                if (c.getCommentText().getContent().contains(comment)) {
+                if (c.getCommentText().content().contains(comment)) {
                     return true;
                 }
             }
@@ -128,7 +128,7 @@ public class YoutubeCommentsExtractorTest {
      * Test a video with an empty comment
      */
     public static class EmptyComment extends Base {
-        private final static String URL = "https://www.youtube.com/watch?v=VM_6n762j6M";
+        private static final String URL = "https://www.youtube.com/watch?v=VM_6n762j6M";
 
         @Override
         protected String extractorUrl() {
@@ -152,9 +152,9 @@ public class YoutubeCommentsExtractorTest {
                 assertFalse(Utils.isBlank(c.getUrl()));
                 assertTrue(c.getLikeCount() >= 0);
                 if (c.getCommentId().equals("Ugga_h1-EXdHB3gCoAEC")) { // comment without text
-                    assertTrue(Utils.isBlank(c.getCommentText().getContent()));
+                    assertTrue(Utils.isBlank(c.getCommentText().content()));
                 } else {
-                    assertFalse(Utils.isBlank(c.getCommentText().getContent()));
+                    assertFalse(Utils.isBlank(c.getCommentText().content()));
                 }
             }
         }
@@ -162,7 +162,7 @@ public class YoutubeCommentsExtractorTest {
     }
 
     public static class HeartedByCreator extends Base {
-        private final static String URL = "https://www.youtube.com/watch?v=RwTdoQNVMTY";
+        private static final String URL = "https://www.youtube.com/watch?v=RwTdoQNVMTY";
 
         @Override
         protected String extractorUrl() {
@@ -188,7 +188,7 @@ public class YoutubeCommentsExtractorTest {
                 YoutubeTestsUtils.testImages(c.getThumbnails());
                 assertFalse(Utils.isBlank(c.getUrl()));
                 assertTrue(c.getLikeCount() >= 0);
-                assertFalse(Utils.isBlank(c.getCommentText().getContent()));
+                assertFalse(Utils.isBlank(c.getCommentText().content()));
                 if (c.isHeartedByUploader()) {
                     heartedByUploader = true;
                 }
@@ -199,7 +199,7 @@ public class YoutubeCommentsExtractorTest {
     }
 
     public static class Pinned extends Base {
-        private final static String URL = "https://www.youtube.com/watch?v=bjFtFMilb34";
+        private static final String URL = "https://www.youtube.com/watch?v=bjFtFMilb34";
 
         @Override
         protected String extractorUrl() {
@@ -223,7 +223,7 @@ public class YoutubeCommentsExtractorTest {
                 YoutubeTestsUtils.testImages(c.getThumbnails());
                 assertFalse(Utils.isBlank(c.getUrl()));
                 assertTrue(c.getLikeCount() >= 0);
-                assertFalse(Utils.isBlank(c.getCommentText().getContent()));
+                assertFalse(Utils.isBlank(c.getCommentText().content()));
             }
 
             assertTrue(comments.getItems().get(0).isPinned(), "First comment isn't pinned");
@@ -235,7 +235,7 @@ public class YoutubeCommentsExtractorTest {
      * A pinned comment with >15K likes is used for the test
      */
     public static class LikesVotes extends Base {
-        private final static String URL = "https://www.youtube.com/watch?v=QqsLTNkzvaY";
+        private static final String URL = "https://www.youtube.com/watch?v=QqsLTNkzvaY";
 
         @Override
         protected String extractorUrl() {
@@ -261,7 +261,7 @@ public class YoutubeCommentsExtractorTest {
      * A pinned comment with >15K likes is used for the test
      */
     public static class LocalizedVoteCount extends Base {
-        private final static String URL = "https://www.youtube.com/watch?v=QqsLTNkzvaY";
+        private static final String URL = "https://www.youtube.com/watch?v=QqsLTNkzvaY";
 
         @Override
         protected String extractorUrl() {
@@ -289,7 +289,7 @@ public class YoutubeCommentsExtractorTest {
     }
 
     public static class RepliesTest extends Base {
-        private final static String URL = "https://www.youtube.com/watch?v=xaQJbozY_Is";
+        private static final String URL = "https://www.youtube.com/watch?v=xaQJbozY_Is";
 
         @Override
         protected String extractorUrl() {
@@ -308,7 +308,7 @@ public class YoutubeCommentsExtractorTest {
 
             final InfoItemsPage<CommentsInfoItem> replies = extractor().getPage(firstComment.getReplies());
 
-            assertEquals("First", replies.getItems().get(0).getCommentText().getContent(),
+            assertEquals("First", replies.getItems().get(0).getCommentText().content(),
                     "First reply comment did not match");
         }
 
@@ -331,7 +331,7 @@ public class YoutubeCommentsExtractorTest {
     }
 
     public static class ChannelOwnerTest extends Base {
-        private final static String URL = "https://www.youtube.com/watch?v=bem4adjGKjE";
+        private static final String URL = "https://www.youtube.com/watch?v=bem4adjGKjE";
 
         @Override
         protected String extractorUrl() {
@@ -357,7 +357,7 @@ public class YoutubeCommentsExtractorTest {
                 YoutubeTestsUtils.testImages(c.getThumbnails());
                 assertFalse(Utils.isBlank(c.getUrl()));
                 assertTrue(c.getLikeCount() >= 0);
-                assertFalse(Utils.isBlank(c.getCommentText().getContent()));
+                assertFalse(Utils.isBlank(c.getCommentText().content()));
                 if (c.isChannelOwner()) {
                     channelOwner = true;
                 }
@@ -369,7 +369,7 @@ public class YoutubeCommentsExtractorTest {
 
 
     public static class CreatorReply extends Base {
-        private final static String URL = "https://www.youtube.com/watch?v=bem4adjGKjE";
+        private static final String URL = "https://www.youtube.com/watch?v=bem4adjGKjE";
 
         @Override
         protected String extractorUrl() {
@@ -395,7 +395,7 @@ public class YoutubeCommentsExtractorTest {
                 YoutubeTestsUtils.testImages(c.getThumbnails());
                 assertFalse(Utils.isBlank(c.getUrl()));
                 assertTrue(c.getLikeCount() >= 0);
-                assertFalse(Utils.isBlank(c.getCommentText().getContent()));
+                assertFalse(Utils.isBlank(c.getCommentText().content()));
                 if (c.hasCreatorReply()) {
                     creatorReply = true;
                 }
@@ -408,7 +408,7 @@ public class YoutubeCommentsExtractorTest {
 
     public static class Formatting extends Base {
 
-        private final static String URL = "https://www.youtube.com/watch?v=zYpyS2HaZHM";
+        private static final String URL = "https://www.youtube.com/watch?v=zYpyS2HaZHM";
 
         @Override
         protected String extractorUrl() {
@@ -423,8 +423,36 @@ public class YoutubeCommentsExtractorTest {
 
             final CommentsInfoItem firstComment = comments.getItems().get(0);
 
-            assertContains("<s>", firstComment.getCommentText().getContent());
-            assertContains("<b>", firstComment.getCommentText().getContent());
+            assertContains("<s>", firstComment.getCommentText().content());
+            assertContains("<b>", firstComment.getCommentText().content());
+        }
+    }
+
+
+    public static class EditedCommentTest extends Base {
+
+        private static final String URL = "https://www.youtube.com/watch?v=VsFjP58j5i8";
+
+        @Override
+        protected String extractorUrl() {
+            return URL;
+        }
+
+        @Test
+        public void testEditedCommentFlagIsExtracted() throws Exception {
+            final InfoItemsPage<CommentsInfoItem> comments = extractor().getInitialPage();
+
+            DefaultTests.defaultTestListOfItems(YouTube, comments.getItems(), comments.getErrors());
+
+            boolean hasEditedComment = false;
+            for (CommentsInfoItem comment : comments.getItems()) {
+                if (comment.isEdited()) {
+                    hasEditedComment = true;
+                    break;
+                }
+            }
+
+            assertTrue(hasEditedComment, "No comments is edited on this video. Ensure test video has edited comment near the top.");
         }
     }
 }
